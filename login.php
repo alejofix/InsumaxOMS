@@ -1,0 +1,94 @@
+<?php
+session_start();
+require_once __DIR__ . '/config/db.php';
+
+$error = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+    
+    if (empty($email) || empty($password)) {
+        $error = 'Por favor ingrese email y contraseña';
+    } else {
+        $stmt = $pdo->prepare("SELECT id, nombre, email, password_hash, rol, apellido, telefono, activo, sede_id FROM usuarios WHERE email = ? AND activo = 1");
+        $stmt->execute([$email]);
+        $user = $stmt->fetch();
+        
+        if ($user && password_verify($password, $user['password_hash'])) {
+            session_regenerate_id(true);
+            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['nombre'] = $user['nombre'];
+            $_SESSION['apellido'] = $user['apellido'];
+            $_SESSION['email'] = $user['email'];
+            $_SESSION['rol'] = $user['rol'];
+            $_SESSION['telefono'] = $user['telefono'] ?? '';
+            $_SESSION['sede_id'] = $user['sede_id'] ?? null;
+            
+            // Redirect based on role
+            $role_redirects = [
+                'admon' => 'admin/dashboard.php',
+                'dist' => 'distribuidor/mis-tickets.php',
+                'comprador' => 'comprador/nuevo-pedido.php'
+            ];
+            
+            $redirect = $role_redirects[$_SESSION['rol']] ?? 'login.php';
+            header('Location: ' . $redirect);
+            exit;
+        } else {
+            $error = 'Credenciales inválidas';
+        }
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INSUMAX - Login</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <h1>INSUMAX</h1>
+                <div class="subtitle">Sistema de Gestión de Pedidos</div>
+            </div>
+            <div class="login-body">
+                <?php if ($error): ?>
+                    <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
+                <?php endif; ?>
+                
+                <form method="POST" action="login.php">
+                    <div class="mb-3">
+                        <label class="form-label">Correo electrónico</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                            <input type="email" class="form-control" name="email" required placeholder="correo@ejemplo.com">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label">Contraseña</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                            <input type="password" class="form-control" name="password" required placeholder="Ingrese su contraseña">
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-insumax w-100">
+                        <i class="bi bi-box-arrow-in-right"></i> Iniciar Sesión
+                    </button>
+                </form>
+                
+                <div class="text-center mt-4 text-muted">
+                    <small>&copy; 2026 INSUMAX</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

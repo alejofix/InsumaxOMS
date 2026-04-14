@@ -1,0 +1,39 @@
+# 🔧 Carpeta temporal / fix
+_fix/
+_fix/*
+
+# 🧪 Archivos temporales
+*.log
+*.tmp
+*.cache
+
+# 🖥️ Sistema
+.DS_Store
+Thumbs.db
+
+# 📁 Mensaje (imágenes de debug y archivos prueba)
+mensaje/
+
+# 🧠 IDE
+.vscode/
+.idea/
+
+# 📦 Dependencias (si usas)
+node_modules/
+vendor/
+
+# 🔐 Configuración sensible
+.env
+.env.*
+
+# 🧾 Backups
+*.bak
+*.sql
+*.zip
+
+# 🚫 Archivos de XAMPP (si aparecen)
+xampp/
+php_error_log
+
+# 📁 Uploads (opcional si no quieres subirlos)
+uploads/
