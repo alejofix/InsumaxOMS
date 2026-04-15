@@ -48,7 +48,7 @@ $sedes = $pdo->query("SELECT id, nombre FROM sedes WHERE activa = 1")->fetchAll(
                     <tr>
                         <td><?= htmlspecialchars($u['nombre'] . ' ' . ($u['apellido'] ?? '')) ?></td>
                         <td><?= htmlspecialchars($u['email']) ?></td>
-                        <td><?= htmlspecialchars($u['celular'] ?? $u['telefono'] ?? '-') ?></td>
+                        <td><?= htmlspecialchars($u['celular'] ?? '-') ?></td>
                         <td><span class="badge bg-<?= $u['rol']=='admon'?'danger':($u['rol']=='dist'?'primary':'success') ?>"><?= strtoupper($u['rol']) ?></span></td>
                         <td><?= htmlspecialchars($u['sede_nombre'] ?? '-') ?></td>
                         <td>
