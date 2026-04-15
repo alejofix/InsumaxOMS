@@ -12,6 +12,14 @@ if ($_SESSION['rol'] !== 'admon') {
 
 $stmt = $pdo->query("SELECT * FROM sedes ORDER BY activa DESC, ciudad, nombre");
 $sedes = $stmt->fetchAll();
+
+$colores_ciudad = [
+    'Bogotá' => '#1E3A5F',
+    'Medellín' => '#00897B',
+    'Pereira' => '#F57C00',
+    'Barranquilla' => '#C62828',
+    'Cali' => '#7B1FA2'
+];
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -32,9 +40,11 @@ $sedes = $stmt->fetchAll();
         </div>
 
         <div class="row">
-            <?php foreach($sedes as $s): ?>
+            <?php foreach($sedes as $s): 
+                $color_ciudad = $colores_ciudad[$s['ciudad']] ?? '#6c757d';
+            ?>
             <div class="col-md-4 mb-3">
-                <div class="card <?= !$s['activa'] ? 'border-secondary opacity-75' : '' ?>">
+                <div class="card h-100 <?= !$s['activa'] ? 'opacity-75' : '' ?>" style="border-left: 4px solid <?= $color_ciudad ?>;">
                     <?php if (!$s['activa']): ?>
                     <div class="card-header bg-secondary text-white">
                         <small><i class="bi bi-eye-slash"></i> OCULTA</small>
@@ -52,7 +62,9 @@ $sedes = $stmt->fetchAll();
                                 </button>
                             </div>
                         </div>
-                        <p class="mb-1 text-muted"><i class="bi bi-geo-alt"></i> <?= htmlspecialchars($s['ciudad']) ?></p>
+                        <p class="mb-1" style="color: <?= $color_ciudad ?>;">
+                            <i class="bi bi-geo-alt"></i> <strong><?= htmlspecialchars($s['ciudad']) ?></strong>
+                        </p>
                         <p class="mb-1"><i class="bi bi-person"></i> <span id="resp-<?= $s['id'] ?>"><?= htmlspecialchars($s['responsable'] ?? 'Sin responsable') ?></span></p>
                         <p class="mb-1"><i class="bi bi-pin-map"></i> <span id="dir-<?= $s['id'] ?>"><?= htmlspecialchars($s['direccion'] ?: 'Sin dirección') ?></span></p>
                         <p class="mb-0"><i class="bi bi-telephone"></i> <span id="tel-<?= $s['id'] ?>"><?= htmlspecialchars($s['telefono'] ?: 'Sin teléfono') ?></span></p>

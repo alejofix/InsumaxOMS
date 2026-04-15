@@ -15,6 +15,15 @@ $ciudades = $stmt->fetchAll();
 
 $ciudad_default = $ciudades[0]['id'] ?? 0;
 
+$colores_ciudad = [
+    'Bogotá' => '#1E3A5F',
+    'Medellín' => '#00897B',
+    'Pereira' => '#F57C00',
+    'Barranquilla' => '#C62828',
+    'Cali' => '#7B1FA2'
+];
+$color_default = $colores_ciudad[$ciudades[0]['nombre']] ?? '#6c757d';
+
 $stmt = $pdo->prepare("
     SELECT i.*, ip.precio_compra, ip.precio_venta
     FROM insumos i
@@ -40,19 +49,21 @@ $insumos = $stmt->fetchAll();
     <?php include '../includes/header.php'; ?>
     <div class="container py-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <div class="d-flex align-items-center gap-3">
+            <div class="d-flex align-items-center gap-3 flex-wrap">
                 <h4><i class="bi bi-box-seam"></i> Catálogo de Insumos</h4>
-                <select id="ciudad-select" class="form-select form-select-sm" style="width: 160px;">
-                    <?php foreach($ciudades as $c): ?>
-                    <option value="<?= $c['id'] ?>" <?= $c['id'] == $ciudad_default ? 'selected' : '' ?>><?= htmlspecialchars($c['nombre']) ?></option>
+                <select id="ciudad-select" class="form-select form-select-sm" style="width: 160px; border-left: 4px solid <?= $color_default ?>;">
+                    <?php foreach($ciudades as $c): 
+                        $color = $colores_ciudad[$c['nombre']] ?? '#6c757d';
+                    ?>
+                    <option value="<?= $c['id'] ?>" data-color="<?= $color ?>" data-nombre="<?= $c['nombre'] ?>" <?= $c['id'] == $ciudad_default ? 'selected' : '' ?>><?= htmlspecialchars($c['nombre']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
             <button class="btn btn-insumax" onclick="mostrarForm()"><i class="bi bi-plus-circle"></i> Nuevo Insumo</button>
         </div>
 
-        <div class="alert alert-info py-2">
-            <i class="bi bi-info-circle"></i> Los precios se muestran y editan <strong>por ciudad</strong>. Seleccione una ciudad para ver/editar sus precios.
+        <div class="alert alert-info py-2" id="ciudad-info" style="border-left: 4px solid <?= $color_default ?>;">
+            <i class="bi bi-geo-alt-fill" style="color: <?= $color_default ?>;"></i> Precios para <strong style="color: <?= $color_default ?>;"><?= htmlspecialchars($ciudades[0]['nombre'] ?? '') ?></strong>. Seleccione otra ciudad para ver/editar sus precios.
         </div>
 
         <div class="table-responsive">
@@ -160,6 +171,16 @@ $insumos = $stmt->fetchAll();
     document.getElementById('ciudad-select').addEventListener('change', function() {
         ciudadActual = this.value;
         document.getElementById('insumo-ciudad').value = ciudadActual;
+        var selectedOption = this.options[this.selectedIndex];
+        var color = selectedOption.getAttribute('data-color') || '#6c757d';
+        var nombre = selectedOption.getAttribute('data-nombre') || '';
+        
+        this.style.borderLeftColor = color;
+        
+        var infoAlert = document.getElementById('ciudad-info');
+        infoAlert.style.borderLeftColor = color;
+        infoAlert.innerHTML = '<i class="bi bi-geo-alt-fill" style="color: ' + color + ';"></i> Precios para <strong style="color: ' + color + ';">' + nombre + '</strong>. Seleccione otra ciudad para ver/editar sus precios.';
+        
         cargarInsumos();
     });
 
@@ -185,13 +206,15 @@ $insumos = $stmt->fetchAll();
 
     function renderTable(data) {
         var tbody = document.getElementById('insumos-body');
+        var selectEl = document.getElementById('ciudad-select');
+        var color = selectEl.options[selectEl.selectedIndex].getAttribute('data-color') || '#6c757d';
         var html = '';
         data.forEach(function(i) {
             var fmt = function(n) {
                 return n ? parseFloat(n).toLocaleString('es-CO') : '-';
             };
             html += '<tr data-id="' + i.id + '">' +
-                '<td>' + (i.codigo || '') + '</td>' +
+                '<td style="border-left: 3px solid ' + color + ';">' + (i.codigo || '') + '</td>' +
                 '<td><span class="badge bg-secondary">' + (i.grupo || '').toUpperCase() + '</span></td>' +
                 '<td>' + i.descripcion + '</td>' +
                 '<td>' + i.unidad_medida + '</td>' +
