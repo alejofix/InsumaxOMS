@@ -2,6 +2,7 @@
 session_start();
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/auth.php';
+require_once __DIR__ . '/../config/csrf.php';
 requireAuth();
 
 if ($_SESSION['rol'] !== 'admon') {
@@ -179,10 +180,12 @@ $sedes = $stmt->fetchAll();
                 body: formData
             })
             .then(function(resp) { 
+                console.log('Response:', resp.status);
                 if (!resp.ok) throw new Error('HTTP ' + resp.status);
                 return resp.json(); 
             })
             .then(function(result) {
+                console.log('Result:', result);
                 if (result.success) {
                     location.reload();
                 } else {
@@ -190,6 +193,7 @@ $sedes = $stmt->fetchAll();
                 }
             })
             .catch(function(err) {
+                console.error('Error:', err);
                 alert('Error al cambiar: ' + err.message);
             });
         };

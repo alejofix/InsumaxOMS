@@ -48,14 +48,33 @@ if ($action === 'create') {
         $stmt->execute([$codigo_ticket, $sede_id, $user_id, $responsable, $observaciones, $fecha_pedido]);
         $ticket_id = $pdo->lastInsertId();
         
-        $stmt = $pdo->prepare("SELECT precio_venta FROM insumos WHERE id = ?");
+        $stmt_ciudad = $pdo->prepare("SELECT ciudad_id FROM sedes WHERE id = ?");
+        $stmt_ciudad->execute([$sede_id]);
+        $sede = $stmt_ciudad->fetch();
+        $ciudad_id = $sede['ciudad_id'] ?? null;
+
+        $stmt_precio = null;
+        if ($ciudad_id) {
+            $stmt_precio = $pdo->prepare("SELECT precio_venta FROM insumos_precios WHERE insumo_id = ? AND ciudad_id = ?");
+        }
+        $stmt_insumo = $pdo->prepare("SELECT precio_venta FROM insumos WHERE id = ?");
         $stmt_ins = $pdo->prepare("INSERT INTO ticket_items (ticket_id, insumo_id, cantidad_pedida, precio_unitario, estado_item) 
             VALUES (?, ?, ?, ?, 'pendiente')");
         
         foreach ($items as $item) {
-            $stmt->execute([$item['insumo_id']]);
-            $insumo = $stmt->fetch();
-            $precio = $insumo['precio_venta'] ?? 0;
+            $precio = 0;
+            if ($stmt_precio) {
+                $stmt_precio->execute([$item['insumo_id'], $ciudad_id]);
+                $precio_row = $stmt_precio->fetch();
+                if ($precio_row && $precio_row['precio_venta']) {
+                    $precio = $precio_row['precio_venta'];
+                }
+            }
+            if ($precio == 0) {
+                $stmt_insumo->execute([$item['insumo_id']]);
+                $insumo = $stmt_insumo->fetch();
+                $precio = $insumo['precio_venta'] ?? 0;
+            }
             $stmt_ins->execute([$ticket_id, $item['insumo_id'], $item['cantidad'], $precio]);
         }
         
