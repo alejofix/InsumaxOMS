@@ -5,7 +5,7 @@ require_once __DIR__ . '/../config/auth.php';
 requireAuth();
 
 if ($_SESSION['rol'] !== 'admon') {
-    header('Location: ../bienvenido.php');
+    header('Location: ../login.php');
     exit;
 }
 

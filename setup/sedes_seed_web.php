@@ -8,24 +8,24 @@ if (!isset($_SESSION['rol']) || $_SESSION['rol'] !== 'admon') {
 }
 
 $sedes = [
-    ['nombre' => 'Prado', 'ciudad' => 'Bogotá'],
-    ['nombre' => 'Chapinero', 'ciudad' => 'Bogotá'],
-    ['nombre' => 'Modelia', 'ciudad' => 'Bogotá'],
-    ['nombre' => 'Manila', 'ciudad' => 'Medellín'],
-    ['nombre' => 'Bello', 'ciudad' => 'Medellín'],
-    ['nombre' => 'Sabaneta', 'ciudad' => 'Medellín'],
-    ['nombre' => 'Pereira', 'ciudad' => 'Pereira'],
-    ['nombre' => 'Barranquilla', 'ciudad' => 'Barranquilla'],
-    ['nombre' => 'Cali', 'ciudad' => 'Cali'],
+    ['nombre' => 'Prado', 'ciudad' => 'Bogotá', 'responsable' => 'Alejandra'],
+    ['nombre' => 'Chapinero', 'ciudad' => 'Bogotá', 'responsable' => 'Alejandra'],
+    ['nombre' => 'Modelia', 'ciudad' => 'Bogotá', 'responsable' => 'Alejandra'],
+    ['nombre' => 'Manila', 'ciudad' => 'Medellín', 'responsable' => 'Angelin'],
+    ['nombre' => 'Bello', 'ciudad' => 'Medellín', 'responsable' => 'Angelin'],
+    ['nombre' => 'Sabaneta', 'ciudad' => 'Medellín', 'responsable' => 'Angelin'],
+    ['nombre' => 'Pereira', 'ciudad' => 'Pereira', 'responsable' => 'Angelin'],
+    ['nombre' => 'Barranquilla', 'ciudad' => 'Barranquilla', 'responsable' => 'Angelin'],
+    ['nombre' => 'Cali', 'ciudad' => 'Cali', 'responsable' => 'Angelin'],
 ];
 
 $pdo->query("UPDATE sedes SET activa = 0 WHERE activa = 1");
 
-$stmt = $pdo->prepare("INSERT INTO sedes (nombre, ciudad, activa) VALUES (?, ?, 1)");
+$stmt = $pdo->prepare("INSERT INTO sedes (nombre, ciudad, responsable, activa) VALUES (?, ?, ?, 1)");
 
 foreach ($sedes as $s) {
-    $stmt->execute([$s['nombre'], $s['ciudad']]);
-    echo "✓ {$s['nombre']} - {$s['ciudad']}<br>";
+    $stmt->execute([$s['nombre'], $s['ciudad'], $s['responsable']]);
+    echo "✓ {$s['nombre']} - {$s['ciudad']} ({$s['responsable']})<br>";
 }
 
 echo "<br><strong>Sedes creadas exitosamente!</strong>";

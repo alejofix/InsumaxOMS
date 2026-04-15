@@ -54,8 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="login-container">
         <div class="login-card">
             <div class="login-header">
-                <h1>INSUMAX</h1>
-                <div class="subtitle">Sistema de Gestión de Pedidos</div>
+                <img src="assets/logo.svg" alt="INSUMAX OMS" style="height: 60px;">
             </div>
             <div class="login-body">
                 <?php if ($error): ?>
@@ -75,7 +74,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <label class="form-label">Contraseña</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                            <input type="password" class="form-control" name="password" required placeholder="Ingrese su contraseña">
+                            <input type="password" class="form-control" name="password" id="password" required placeholder="Ingrese su contraseña">
+                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword()">
+                                <i class="bi bi-eye" id="eye-icon"></i>
+                            </button>
                         </div>
                     </div>
                     
@@ -90,5 +92,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         </div>
     </div>
+    
+    <script>
+    function togglePassword() {
+        const input = document.getElementById('password');
+        const icon = document.getElementById('eye-icon');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.replace('bi-eye', 'bi-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.replace('bi-eye-slash', 'bi-eye');
+        }
+    }
+    </script>
 </body>
 </html>
