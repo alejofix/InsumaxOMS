@@ -1,7 +1,7 @@
 <?php
 $current_page = basename($_SERVER['PHP_SELF'], '.php');
 $base_path = dirname($_SERVER['PHP_SELF']);
-$logout_link = $base_path === '' || $base_path === '/admin' ? 'logout.php' : '../logout.php';
+$logout_link = '../logout.php';
 $home_link = match($_SESSION['rol'] ?? '') {
     'admon' => $base_path === '/admin' ? 'dashboard.php' : 'dashboard.php',
     'dist' => $base_path === '/distribuidor' ? 'mis-tickets.php' : '../distribuidor/mis-tickets.php',
@@ -48,11 +48,11 @@ $home_link = match($_SESSION['rol'] ?? '') {
             </ul>
             <ul class="navbar-nav">
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown"><?= htmlspecialchars($_SESSION['nombre'] ?? 'Usuario') ?></a>
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><?= htmlspecialchars($_SESSION['nombre'] ?? 'Usuario') ?></a>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li><span class="dropdown-item-text text-muted small"><?= ucfirst($_SESSION['rol'] ?? '') ?></span></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="<?= $logout_link ?>">Salir</a></li>
+                        <li><a class="dropdown-item" href="<?= $logout_link ?>"><i class="bi bi-box-arrow-right"></i> Salir</a></li>
                     </ul>
                 </li>
             </ul>

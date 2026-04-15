@@ -198,7 +198,21 @@ body {
   .login-card {
     margin: 20px;
   }
-  
+
+/* General Responsive Adjustments */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+table {
+  width: 100%;
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* For smoother scrolling on iOS */
+}
+
+
   .login-body {
     padding: 30px 20px;
   }

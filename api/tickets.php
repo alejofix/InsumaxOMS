@@ -75,34 +75,39 @@ if ($action === 'list') {
     $user_id = $_SESSION['user_id'];
     $rol = $_SESSION['rol'];
     
-    if ($rol === 'comprador') {
-        $stmt = $pdo->prepare("SELECT t.*, s.nombre as sede_nombre, s.ciudad 
-            FROM tickets t 
-            JOIN sedes s ON t.sede_id = s.id 
-            WHERE t.comprador_id = ? 
-            ORDER BY t.created_at DESC");
-        $stmt->execute([$user_id]);
-    } elseif ($rol === 'dist') {
-        $stmt = $pdo->prepare("SELECT t.*, s.nombre as sede_nombre, s.ciudad 
-            FROM tickets t 
-            JOIN sedes s ON t.sede_id = s.id 
-            WHERE t.distribuidor_id = ? 
-            ORDER BY t.created_at DESC");
-        $stmt->execute([$user_id]);
-    } else {
-        $stmt = $pdo->prepare("SELECT t.*, s.nombre as sede_nombre, s.ciudad, 
-            u.nombre as comprador_nombre, u.apellido as comprador_apellido,
-            d.nombre as distribuidor_nombre
-            FROM tickets t 
-            JOIN sedes s ON t.sede_id = s.id
-            JOIN usuarios u ON t.comprador_id = u.id
-            LEFT JOIN usuarios d ON t.distribuidor_id = d.id
-            ORDER BY t.created_at DESC");
-        $stmt->execute();
+    try {
+        if ($rol === 'comprador') {
+            $stmt = $pdo->prepare("SELECT t.*, s.nombre as sede_nombre, s.ciudad 
+                FROM tickets t 
+                JOIN sedes s ON t.sede_id = s.id 
+                WHERE t.comprador_id = ? 
+                ORDER BY t.created_at DESC");
+            $stmt->execute([$user_id]);
+        } elseif ($rol === 'dist') {
+            $stmt = $pdo->prepare("SELECT t.*, s.nombre as sede_nombre, s.ciudad 
+                FROM tickets t 
+                JOIN sedes s ON t.sede_id = s.id 
+                WHERE t.distribuidor_id = ? 
+                ORDER BY t.created_at DESC");
+            $stmt->execute([$user_id]);
+        } else {
+            $stmt = $pdo->prepare("SELECT t.*, s.nombre as sede_nombre, s.ciudad, 
+                u.nombre as comprador_nombre, u.apellido as comprador_apellido,
+                d.nombre as distribuidor_nombre
+                FROM tickets t 
+                JOIN sedes s ON t.sede_id = s.id
+                JOIN usuarios u ON t.comprador_id = u.id
+                LEFT JOIN usuarios d ON t.distribuidor_id = d.id
+                ORDER BY t.created_at DESC");
+            $stmt->execute();
+        }
+        
+        $tickets = $stmt->fetchAll();
+        echo json_encode(['success' => true, 'data' => $tickets]);
+    } catch (PDOException $e) {
+        error_log("Error fetching tickets: " . $e->getMessage());
+        echo json_encode(['success' => false, 'error' => 'Error fetching tickets']);
     }
-    
-    $tickets = $stmt->fetchAll();
-    echo json_encode(['success' => true, 'data' => $tickets]);
     exit;
 }
 
