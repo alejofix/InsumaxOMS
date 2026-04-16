@@ -16,21 +16,10 @@ if ($_SESSION['rol'] !== 'admon') {
 $stmt = $pdo->query("SELECT id, nombre FROM ciudades WHERE activa = 1 ORDER BY nombre");
 $ciudades = $stmt->fetchAll();
 
-$ciudad_default = $ciudades[0]['id'] ?? 0;
-$color_default = $colors['ciudades'][$ciudades[0]['nombre']] ?? '#6c757d';
+$ciudad_default = 0;
+$color_default = '#6c757d';
 
-$stmt = $pdo->prepare("
-    SELECT i.*, ip.precio_compra, ip.precio_venta,
-        u.unidad_compra, u.unidad_base, u.factor_conversion, u.presentacion,
-        ROUND(ip.precio_compra / NULLIF(u.factor_conversion, 0) * 1000, 2) AS precio_kg
-    FROM insumos i
-    LEFT JOIN insumos_precios ip ON i.id = ip.insumo_id AND ip.ciudad_id = ?
-    LEFT JOIN insumos_unidades u ON i.id = u.insumo_id
-    WHERE i.activo = 1
-    ORDER BY FIELD(i.grupo, '" . implode("','", $enums['grupos']) . "'), i.descripcion
-");
-$stmt->execute([$ciudad_default]);
-$insumos = $stmt->fetchAll();
+$insumos = [];
 
 $stmt = $pdo->query("SELECT * FROM unidades_medida WHERE activo = 1 ORDER BY tipo, codigo");
 $unidades = $stmt->fetchAll();
@@ -53,10 +42,11 @@ $unidades = $stmt->fetchAll();
             <div class="d-flex align-items-center gap-3 flex-wrap">
                 <h4><i class="bi bi-box-seam"></i> Catálogo de Insumos</h4>
                 <select id="ciudad-select" class="form-select form-select-sm" style="width: 160px; border-left: 4px solid <?= $color_default ?>;">
+                    <option value="">Seleccione ciudad...</option>
                     <?php foreach($ciudades as $c): 
                         $color = $colors['ciudades'][$c['nombre']] ?? '#6c757d';
                     ?>
-                    <option value="<?= $c['id'] ?>" data-color="<?= $color ?>" data-nombre="<?= $c['nombre'] ?>" <?= $c['id'] == $ciudad_default ? 'selected' : '' ?>><?= htmlspecialchars($c['nombre']) ?></option>
+                    <option value="<?= $c['id'] ?>" data-color="<?= $color ?>" data-nombre="<?= $c['nombre'] ?>"><?= htmlspecialchars($c['nombre']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -85,52 +75,23 @@ $unidades = $stmt->fetchAll();
         </div>
 
         <div class="table-responsive">
-            <table class="table table-hover">
+            <table class="table table-hover table-sm">
                 <thead class="table-light">
                     <tr>
-                        <th>Código</th>
+                        <th>Cód</th>
                         <th>Grupo</th>
                         <th>Descripción</th>
-                        <th>Presentación</th>
+                        <th>Pres.</th>
                         <th>UND</th>
-                        <th>Factor</th>
-                        <th>Precio Compra</th>
-                        <th>Precio/KG</th>
-                        <th>Acciones</th>
+                        <th>Fac</th>
+                        <th>$ Compra</th>
+                        <th>$ Venta</th>
+                        <th>/KG</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody id="insumos-body">
-                    <?php foreach($insumos as $i): 
-                        $factor = floatval($i['factor_conversion'] ?? 1);
-                        $presentacion = htmlspecialchars($i['presentacion'] ?? '-');
-                    ?>
-                    <tr data-id="<?= $i['id'] ?>" data-grupo="<?= $i['grupo'] ?>">
-                        <td style="border-left: 3px solid <?= $color_default ?>;"><?= htmlspecialchars($i['codigo'] ?? '') ?></td>
-                        <td><span class="badge" style="background-color: <?= $colors['grupos'][$i['grupo']] ?? '#6c757d' ?>; color: <?= $i['grupo'] === 'quesos' ? '#000' : '#fff' ?>;"><?= strtoupper($i['grupo']) ?></span></td>
-                        <td><?= htmlspecialchars($i['descripcion']) ?></td>
-                        <td><small class="text-muted"><?= $presentacion ?></small></td>
-                        <td><span class="badge bg-primary"><?= htmlspecialchars($i['unidad_compra'] ?? $i['unidad_medida'] ?? '-') ?></span></td>
-                        <td>
-                            <?php if ($factor > 1): ?>
-                                <strong><?= number_format($factor, 0, ',', '.') ?>g</strong>
-                            <?php else: ?>
-                                <span class="text-muted">-</span>
-                            <?php endif; ?>
-                        </td>
-                        <td><?= $i['precio_compra'] ? '$' . number_format($i['precio_compra'], 0, ',', '.') : '-' ?></td>
-                        <td>
-                            <?php if ($factor > 1 && $i['precio_kg']): ?>
-                                <span class="badge bg-success">$<?= number_format($i['precio_kg'], 0, ',', '.') ?>/kg</span>
-                            <?php else: ?>
-                                <span class="text-muted">-</span>
-                            <?php endif; ?>
-                        </td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary" onclick="editar(<?= $i['id'] ?>)"><i class="bi bi-pencil"></i></button>
-                            <button class="btn btn-sm btn-outline-danger" onclick="eliminar(<?= $i['id'] ?>)"><i class="bi bi-trash"></i></button>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
+                    <tr><td colspan="10" class="text-center py-4 text-muted"><i class="bi bi-geo-alt"></i> Seleccione una ciudad para ver los insumos</td></tr>
                 </tbody>
             </table>
         </div>
@@ -238,7 +199,7 @@ $unidades = $stmt->fetchAll();
 
     <script>
     var basePath = '..';
-    var ciudadActual = <?= $ciudad_default ?>;
+    var ciudadActual = 0;
     var csrfToken = '<?php echo csrfToken(); ?>';
 
     var coloresGrupo = <?= json_encode($colors['grupos']) ?>;
@@ -248,18 +209,25 @@ $unidades = $stmt->fetchAll();
         if (ciudadSelect) {
             ciudadSelect.addEventListener('change', function() {
                 ciudadActual = this.value;
-                document.getElementById('insumo-ciudad').value = ciudadActual;
                 var selectedOption = this.options[this.selectedIndex];
-                var color = selectedOption.getAttribute('data-color') || '#6c757d';
-                var nombre = selectedOption.getAttribute('data-nombre') || '';
+                var color = selectedOption ? selectedOption.getAttribute('data-color') : '#6c757d';
+                var nombre = selectedOption ? selectedOption.getAttribute('data-nombre') : '';
                 
                 this.style.borderLeftColor = color;
                 
                 var infoAlert = document.getElementById('ciudad-info');
-                infoAlert.style.borderLeftColor = color;
-                infoAlert.innerHTML = '<i class="bi bi-geo-alt-fill" style="color: ' + color + ';"></i> Precios para <strong style="color: ' + color + ';">' + nombre + '</strong>. Seleccione otra ciudad para ver/editar sus precios.';
+                if (infoAlert) {
+                    infoAlert.style.borderLeftColor = color;
+                    infoAlert.innerHTML = '<i class="bi bi-geo-alt-fill" style="color: ' + color + ';"></i> Precios para <strong style="color: ' + color + ';">' + nombre + '</strong>';
+                }
                 
-                cargarInsumos();
+                document.getElementById('insumo-ciudad').value = ciudadActual;
+                
+                if (ciudadActual) {
+                    cargarInsumos();
+                } else {
+                    document.getElementById('insumos-body').innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted"><i class="bi bi-geo-alt"></i> Seleccione una ciudad para ver los insumos</td></tr>';
+                }
             });
         }
 
@@ -388,7 +356,7 @@ $unidades = $stmt->fetchAll();
 
     function cargarInsumos() {
         var url = basePath + '/api/insumos.php?action=list&ciudad_id=' + ciudadActual;
-        document.getElementById('insumos-body').innerHTML = '<tr><td colspan="9" class="text-center py-3"><i class="bi bi-hourglass-split"></i> Cargando...</td></tr>';
+        document.getElementById('insumos-body').innerHTML = '<tr><td colspan="10" class="text-center py-3"><i class="bi bi-hourglass-split"></i> Cargando...</td></tr>';
         
         fetch(url)
             .then(function(resp) { return resp.json(); })
@@ -413,27 +381,34 @@ $unidades = $stmt->fetchAll();
             };
             var factor = parseFloat(i.factor_conversion) || 1;
             var factorDisplay = factor > 1 ? '<strong>' + fmt(factor) + 'g</strong>' : '<span class="text-muted">-</span>';
-            var precioKg = i.precio_kg ? '<span class="badge bg-success">$' + fmt(i.precio_kg) + '/kg</span>' : '<span class="text-muted">-</span>';
+            var precioKg = i.precio_kg ? '<span class="badge bg-success">$' + fmt(i.precio_kg) + '</span>' : '<span class="text-muted">-</span>';
             var unidadDisplay = '<span class="badge bg-primary">' + (i.unidad_compra || i.unidad_medida || '-') + '</span>';
             var colorGrupo = coloresGrupo[i.grupo] || '#6c757d';
             var presentacion = i.presentacion || '-';
+            var activo = i.activo !== 0 ? 1 : 0;
+            var iconEye = activo ? 'bi-eye' : 'bi-eye-slash';
+            var titleEye = activo ? 'Ocultar' : 'Mostrar';
+            var grupoShort = (i.grupo || '').substring(0, 3).toUpperCase();
+            var rowClass = activo ? '' : 'table-secondary opacity-75';
+            var descClass = activo ? 'text-nowrap' : 'text-nowrap text-muted text-decoration-line-through';
             
-            html += '<tr data-id="' + i.id + '" data-grupo="' + i.grupo + '">' +
-                '<td style="border-left: 3px solid ' + color + ';">' + (i.codigo || '') + '</td>' +
-                '<td><span class="badge" style="background-color:' + colorGrupo + '; color:' + (i.grupo === 'quesos' ? '#000' : '#fff') + ';">' + (i.grupo || '').toUpperCase() + '</span></td>' +
-                '<td>' + i.descripcion + '</td>' +
-                '<td><small class="text-muted">' + presentacion + '</small></td>' +
+            html += '<tr data-id="' + i.id + '" data-grupo="' + i.grupo + '" class="' + rowClass + '">' +
+                '<td style="border-left: 3px solid ' + color + ';" class="text-nowrap">' + (i.codigo || '') + '</td>' +
+                '<td><span class="badge" style="background-color:' + colorGrupo + '; color:' + (i.grupo === 'quesos' ? '#000' : '#fff') + ';">' + grupoShort + '</span></td>' +
+                '<td class="' + descClass + '">' + i.descripcion + '</td>' +
+                '<td class="text-muted small">' + presentacion + '</td>' +
                 '<td>' + unidadDisplay + '</td>' +
-                '<td>' + factorDisplay + '</td>' +
-                '<td>' + (i.precio_compra ? '$' + fmt(i.precio_compra) : '-') + '</td>' +
+                '<td class="text-nowrap">' + factorDisplay + '</td>' +
+                '<td class="text-nowrap">' + (i.precio_compra ? '$' + fmt(i.precio_compra) : '-') + '</td>' +
+                '<td class="text-nowrap">' + (i.precio_venta ? '$' + fmt(i.precio_venta) : '-') + '</td>' +
                 '<td>' + precioKg + '</td>' +
-                '<td><button class="btn btn-sm btn-outline-primary" onclick="editar(' + i.id + ')"><i class="bi bi-pencil"></i></button>' +
-                ' <button class="btn btn-sm btn-outline-danger" onclick="eliminar(' + i.id + ')"><i class="bi bi-trash"></i></button></td>' +
+                '<td><button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="toggleInsumo(' + i.id + ', ' + activo + ')" title="' + titleEye + '"><i class="bi ' + iconEye + '"></i></button>' +
+                ' <button class="btn btn-sm btn-outline-primary py-0 px-1" onclick="editar(' + i.id + ')"><i class="bi bi-pencil"></i></button></td>' +
                 '</tr>';
         });
         
         if (html === '') {
-            html = '<tr><td colspan="9" class="text-center py-3 text-muted">No hay insumos registrados</td></tr>';
+            html = '<tr><td colspan="10" class="text-center py-3 text-muted">No hay insumos registrados</td></tr>';
         }
         
         tbody.innerHTML = html;
@@ -496,10 +471,9 @@ $unidades = $stmt->fetchAll();
     function guardarInsumo() {
         var form = document.getElementById('insumo-form');
         var formData = new FormData(form);
-        formData.append('action', 'save');
         formData.append('csrf_token', csrfToken);
 
-        var url = basePath + '/api/insumos.php';
+        var url = basePath + '/api/insumos.php?action=save';
         fetch(url, {
             method: 'POST',
             body: formData
@@ -518,11 +492,10 @@ $unidades = $stmt->fetchAll();
     function eliminar(id) {
         if (!confirm('¿Eliminar este insumo?')) return;
         var formData = new FormData();
-        formData.append('action', 'delete');
         formData.append('csrf_token', csrfToken);
         formData.append('id', id);
 
-        var url = basePath + '/api/insumos.php';
+        var url = basePath + '/api/insumos.php?action=delete';
         fetch(url, {
             method: 'POST',
             body: formData
@@ -534,6 +507,33 @@ $unidades = $stmt->fetchAll();
             } else {
                 alert('Error: ' + (res.error || 'desconocido'));
             }
+        });
+    }
+
+    function toggleInsumo(id, activo) {
+        var accion = activo ? 'ocultar' : 'mostrar';
+        if (!confirm('¿Desea ' + accion + ' este insumo?')) return;
+        
+        var formData = new FormData();
+        formData.append('csrf_token', csrfToken);
+        formData.append('id', id);
+
+        var url = basePath + '/api/insumos.php?action=toggle';
+        fetch(url, {
+            method: 'POST',
+            body: formData
+        })
+        .then(function(resp) { return resp.json(); })
+        .then(function(res) {
+            if (res.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + (res.error || 'desconocido'));
+            }
+        })
+        .catch(function(err) {
+            console.error('Error:', err);
+            alert('Error al cambiar estado del insumo');
         });
     }
     </script>

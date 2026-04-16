@@ -5,12 +5,20 @@ require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/csrf.php';
 
 header('Content-Type: application/json');
-requireAuth();
 
-$action = $_GET['action'] ?? '';
+if (!isset($_SESSION['user_id'])) {
+    echo json_encode(['success' => false, 'error' => 'No autenticado']);
+    exit;
+}
+
+$action = $_GET['action'] ?? $_POST['action'] ?? '';
+error_log("API insumos - Action: $action, GET: " . print_r($_GET, true) . ", POST: " . print_r($_POST, true));
 
 if ($action === 'unidades') {
-    requireRole('admon');
+    if ($_SESSION['rol'] !== 'admon') {
+        echo json_encode(['success' => false, 'error' => 'Acceso prohibido']);
+        exit;
+    }
     $stmt = $pdo->query("SELECT * FROM unidades_medida WHERE activo = 1 ORDER BY tipo, codigo");
     echo json_encode(['success' => true, 'data' => $stmt->fetchAll()]);
     exit;
@@ -34,17 +42,16 @@ if ($action === 'list') {
         FROM insumos i
         LEFT JOIN insumos_precios ip ON i.id = ip.insumo_id AND ip.ciudad_id = ?
         LEFT JOIN insumos_unidades u ON i.id = u.insumo_id
-        WHERE i.activo = 1
     ";
     
     $params = [$ciudad_id];
     
     if ($grupo) {
-        $sql .= " AND i.grupo = ?";
+        $sql .= " WHERE i.grupo = ?";
         $params[] = $grupo;
     }
     
-    $sql .= " ORDER BY FIELD(i.grupo, 'carnes', 'quesos', 'plaza', 'salsas', 'varios', 'aseo'), i.descripcion";
+    $sql .= " ORDER BY i.activo DESC, FIELD(i.grupo, 'carnes', 'quesos', 'plaza', 'salsas', 'varios', 'aseo'), i.descripcion";
     
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
@@ -87,8 +94,14 @@ if ($action === 'get') {
 }
 
 if ($action === 'save') {
-    requireCsrf();
-    requireRole('admon');
+    if ($_SESSION['rol'] !== 'admon') {
+        echo json_encode(['success' => false, 'error' => 'Acceso prohibido']);
+        exit;
+    }
+    if (!isset($_POST['csrf_token']) || !verifyCsrf($_POST['csrf_token'])) {
+        echo json_encode(['success' => false, 'error' => 'Token CSRF inválido']);
+        exit;
+    }
     
     $id = $_POST['id'] ?? null;
     $codigo = trim($_POST['codigo'] ?? '');
@@ -150,8 +163,14 @@ if ($action === 'save') {
 }
 
 if ($action === 'delete') {
-    requireCsrf();
-    requireRole('admon');
+    if ($_SESSION['rol'] !== 'admon') {
+        echo json_encode(['success' => false, 'error' => 'Acceso prohibido']);
+        exit;
+    }
+    if (!isset($_POST['csrf_token']) || !verifyCsrf($_POST['csrf_token'])) {
+        echo json_encode(['success' => false, 'error' => 'Token CSRF inválido']);
+        exit;
+    }
     
     $id = $_POST['id'] ?? 0;
     $stmt = $pdo->prepare("UPDATE insumos SET activo = 0 WHERE id = ?");
@@ -161,8 +180,39 @@ if ($action === 'delete') {
     exit;
 }
 
+if ($action === 'toggle') {
+    error_log("TOGGLE action - POST: " . print_r($_POST, true));
+    
+    if ($_SESSION['rol'] !== 'admon') {
+        echo json_encode(['success' => false, 'error' => 'Acceso prohibido']);
+        exit;
+    }
+    if (!isset($_POST['csrf_token']) || !verifyCsrf($_POST['csrf_token'])) {
+        echo json_encode(['success' => false, 'error' => 'Token CSRF inválido']);
+        exit;
+    }
+    
+    $id = intval($_POST['id'] ?? 0);
+    if (!$id) {
+        echo json_encode(['success' => false, 'error' => 'ID requerido']);
+        exit;
+    }
+    
+    try {
+        $stmt = $pdo->prepare("UPDATE insumos SET activo = NOT activo WHERE id = ?");
+        $stmt->execute([$id]);
+        echo json_encode(['success' => true]);
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+    exit;
+}
+
 if ($action === 'ciudades') {
-    requireRole('admon');
+    if ($_SESSION['rol'] !== 'admon') {
+        echo json_encode(['success' => false, 'error' => 'Acceso prohibido']);
+        exit;
+    }
     $stmt = $pdo->query("SELECT id, nombre FROM ciudades WHERE activa = 1 ORDER BY nombre");
     echo json_encode(['success' => true, 'data' => $stmt->fetchAll()]);
     exit;

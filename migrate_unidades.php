@@ -68,11 +68,35 @@ try {
     ");
     echo "  ✓ Tabla creada\n\n";
     
-    // FASE 3: Migrar datos existentes
+    // FASE 3: Migrar datos existentes con presentaciones específicas
     echo "[3/4] Migrando insumos existentes...\n";
     
-    $stmt = $pdo->query("SELECT id, unidad_medida, descripcion FROM insumos WHERE activo = 1");
-    $insumos = $stmt->fetchAll();
+    // Datos específicos por insumo (id, unidad_compra, unidad_base, factor, presentacion)
+    $insumos_data = [
+        1  => ['KG', 'G', 1000, 'Kilogramo'],
+        2  => ['KG', 'G', 1000, 'Kilogramo'],
+        3  => ['KG', 'G', 1000, 'Porción 150g'],
+        4  => ['FILETE', 'G', 120, 'Pechuga 120g'],
+        5  => ['KG', 'G', 1000, 'Kilogramo'],
+        6  => ['CAJA', 'G', 1, 'Colanta 4kg'],
+        7  => ['CAJA', 'G', 1, 'Philadelphia 3 lb'],
+        8  => ['BLQ', 'G', 1, 'Mozarella tajado'],
+        9  => ['BLQ', 'G', 1, 'Cheddar láminas'],
+        10 => ['KG', 'G', 1000, 'Kilogramo'],
+        11 => ['UND', 'UND', 1, 'Unidad'],
+        12 => ['KG', 'G', 1000, 'Kilogramo'],
+        13 => ['KG', 'G', 1000, 'Kilogramo'],
+        14 => ['KG', 'G', 1000, 'Kilogramo'],
+        15 => ['UND', 'UND', 1, 'bolsa 5k'],
+        16 => ['BALDE', 'G', 1, 'Mayonesa'],
+        17 => ['BALDE', 'G', 1, 'Mostaza'],
+        18 => ['PAQ', 'G', 1, 'Paquete'],
+        19 => ['KG', 'G', 1000, 'Kilogramo'],
+        20 => ['GL', 'ML', 3785, 'Galón 3.8L'],
+        21 => ['GL', 'ML', 3785, 'Galón 3.8L'],
+        22 => ['CJ', 'G', 1, 'Caja'],
+        23 => ['PQT', 'G', 1, '200 und'],
+    ];
     
     $migrados = 0;
     $stmtInsert = $pdo->prepare("
@@ -85,43 +109,8 @@ try {
             presentacion = VALUES(presentacion)
     ");
     
-    foreach ($insumos as $i) {
-        $unidad = $i['unidad_medida'];
-        $factor = 1;
-        $base = 'UND';
-        $presentacion = $i['descripcion'];
-        
-        switch ($unidad) {
-            case 'KG':
-                $factor = 1000;
-                $base = 'G';
-                $presentacion = 'Kilogramo';
-                break;
-            case 'GL':
-                $factor = 3785;
-                $base = 'ML';
-                $presentacion = 'Galón 3.8L';
-                break;
-            case 'FILETE':
-                $factor = 120;
-                $base = 'G';
-                $presentacion = 'Porción filete 120g';
-                break;
-            case 'CAJA':
-            case 'BALDE':
-            case 'BLQ':
-            case 'PAQ':
-            case 'PQT':
-            case 'CJ':
-            case 'UND':
-            case 'UNIDAD':
-                $factor = 1;
-                $base = ($unidad === 'UND' || $unidad === 'UNIDAD') ? 'UND' : 'G';
-                $presentacion = $i['descripcion'];
-                break;
-        }
-        
-        $stmtInsert->execute([$i['id'], $unidad, $base, $factor, $presentacion]);
+    foreach ($insumos_data as $id => $data) {
+        $stmtInsert->execute([$id, $data[0], $data[1], $data[2], $data[3]]);
         $migrados++;
     }
     echo "  ✓ {$migrados} insumos migrados\n\n";
@@ -152,11 +141,9 @@ try {
     }
     
     $total = $pdo->query("SELECT COUNT(*) FROM insumos_unidades")->fetchColumn();
-    $pendientes = $pdo->query("SELECT COUNT(*) FROM insumos_unidades WHERE factor_conversion = 1 AND unidad_compra IN ('CAJA', 'BALDE', 'BLQ')")->fetchColumn();
     
     echo "\n--- RESUMEN ---\n";
     echo "Total insumos migrados: {$total}\n";
-    echo "Pendientes de factor (CAJA/BALDE/BLQ): {$pendientes}\n";
     echo "\n✓ MIGRACIÓN COMPLETADA EXITOSAMENTE\n";
     
 } catch (Exception $e) {
