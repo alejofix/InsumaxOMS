@@ -76,6 +76,26 @@ $unidades = $stmt->fetchAll();
             <button class="btn btn-insumax" onclick="mostrarForm()"><i class="bi bi-plus-circle"></i> Nuevo Insumo</button>
         </div>
 
+        <div class="d-flex gap-3 mb-3 align-items-center flex-wrap">
+            <div class="input-group" style="max-width: 280px;">
+                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                <input type="text" id="buscar-insumo" class="form-control" placeholder="Buscar insumo...">
+            </div>
+            <div class="input-group" style="max-width: 220px;">
+                <span class="input-group-text bg-white"><i class="bi bi-tag"></i></span>
+                <select id="filtro-grupo" class="form-select">
+                    <option value="">Todos los grupos</option>
+                    <option value="carnes">Carnes</option>
+                    <option value="quesos">Quesos</option>
+                    <option value="plaza">Plaza</option>
+                    <option value="salsas">Salsas</option>
+                    <option value="varios">Varios</option>
+                    <option value="aseo">Aseo</option>
+                </select>
+            </div>
+            <span id="contador-insumos" class="text-muted small"></span>
+        </div>
+
         <div class="alert alert-info py-2" id="ciudad-info" style="border-left: 4px solid <?= $color_default ?>;">
             <i class="bi bi-geo-alt-fill" style="color: <?= $color_default ?>;"></i> Precios para <strong style="color: <?= $color_default ?>;"><?= htmlspecialchars($ciudades[0]['nombre'] ?? '') ?></strong>. Seleccione otra ciudad para ver/editar sus precios.
         </div>
@@ -100,7 +120,7 @@ $unidades = $stmt->fetchAll();
                         $factor = floatval($i['factor_conversion'] ?? 1);
                         $presentacion = htmlspecialchars($i['presentacion'] ?? '-');
                     ?>
-                    <tr data-id="<?= $i['id'] ?>">
+                    <tr data-id="<?= $i['id'] ?>" data-grupo="<?= $i['grupo'] ?>">
                         <td style="border-left: 3px solid <?= $color_default ?>;"><?= htmlspecialchars($i['codigo'] ?? '') ?></td>
                         <td><span class="badge" style="background-color: <?= $colores_grupo[$i['grupo']] ?? '#6c757d' ?>; color: <?= $i['grupo'] === 'quesos' ? '#000' : '#fff' ?>;"><?= strtoupper($i['grupo']) ?></span></td>
                         <td><?= htmlspecialchars($i['descripcion']) ?></td>
@@ -301,7 +321,45 @@ $unidades = $stmt->fetchAll();
         
         var factor = document.getElementById('insumo-factor');
         if (factor) factor.addEventListener('input', actualizarPrecioKG);
+
+        var filtroGrupo = document.getElementById('filtro-grupo');
+        var buscarInput = document.getElementById('buscar-insumo');
+        
+        if (filtroGrupo) {
+            filtroGrupo.addEventListener('change', filtrarTabla);
+        }
+        if (buscarInput) {
+            buscarInput.addEventListener('input', filtrarTabla);
+        }
     });
+
+    function filtrarTabla() {
+        var grupoSeleccionado = document.getElementById('filtro-grupo').value.toLowerCase();
+        var textoBusqueda = document.getElementById('buscar-insumo').value.toLowerCase();
+        var tbody = document.getElementById('insumos-body');
+        var filas = tbody.querySelectorAll('tr');
+        var contador = 0;
+        
+        filas.forEach(function(fila) {
+            var grupoFila = (fila.getAttribute('data-grupo') || '').toLowerCase();
+            var descripcion = (fila.querySelector('td:nth-child(3)')?.textContent || '').toLowerCase();
+            var codigo = (fila.querySelector('td:first-child')?.textContent || '').toLowerCase();
+            
+            var coincideGrupo = grupoSeleccionado === '' || grupoFila === grupoSeleccionado;
+            var coincideBusqueda = textoBusqueda === '' || 
+                                   descripcion.includes(textoBusqueda) || 
+                                   codigo.includes(textoBusqueda);
+            
+            if (coincideGrupo && coincideBusqueda) {
+                fila.style.display = '';
+                contador++;
+            } else {
+                fila.style.display = 'none';
+            }
+        });
+        
+        document.getElementById('contador-insumos').textContent = contador + ' de ' + filas.length + ' insumos';
+    }
 
     function actualizarPrecioKG() {
         var precio = parseFloat(document.getElementById('insumo-pcompra').value) || 0;
@@ -386,7 +444,7 @@ $unidades = $stmt->fetchAll();
             var colorGrupo = coloresGrupo[i.grupo] || '#6c757d';
             var presentacion = i.presentacion || '-';
             
-            html += '<tr data-id="' + i.id + '">' +
+            html += '<tr data-id="' + i.id + '" data-grupo="' + i.grupo + '">' +
                 '<td style="border-left: 3px solid ' + color + ';">' + (i.codigo || '') + '</td>' +
                 '<td><span class="badge" style="background-color:' + colorGrupo + '; color:' + (i.grupo === 'quesos' ? '#000' : '#fff') + ';">' + (i.grupo || '').toUpperCase() + '</span></td>' +
                 '<td>' + i.descripcion + '</td>' +
@@ -405,6 +463,7 @@ $unidades = $stmt->fetchAll();
         }
         
         tbody.innerHTML = html;
+        filtrarTabla();
     }
 
     function mostrarForm() {
