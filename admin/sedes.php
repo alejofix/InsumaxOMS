@@ -11,7 +11,10 @@ if ($_SESSION['rol'] !== 'admon') {
     exit;
 }
 
-$stmt = $pdo->query("SELECT * FROM sedes ORDER BY activa DESC, ciudad, nombre");
+$stmt = $pdo->query("SELECT s.*, c.nombre as ciudad_nombre 
+    FROM sedes s 
+    LEFT JOIN ciudades c ON s.ciudad_id = c.id 
+    ORDER BY s.activa DESC, c.nombre, s.nombre");
 $sedes = $stmt->fetchAll();
 ?>
 <!DOCTYPE html>
@@ -34,7 +37,7 @@ $sedes = $stmt->fetchAll();
 
         <div class="row">
             <?php foreach($sedes as $s): 
-                $color_ciudad = $colors['ciudades'][$s['ciudad']] ?? '#6c757d';
+                $color_ciudad = $colors['ciudades'][$s['ciudad_nombre']] ?? '#6c757d';
             ?>
             <div class="col-md-4 mb-3">
                 <div class="card h-100 <?= !$s['activa'] ? 'opacity-75' : '' ?>" style="border-left: 4px solid <?= $color_ciudad ?>;">
@@ -56,7 +59,7 @@ $sedes = $stmt->fetchAll();
                             </div>
                         </div>
                         <p class="mb-1" style="color: <?= $color_ciudad ?>;">
-                            <i class="bi bi-geo-alt"></i> <strong><?= htmlspecialchars($s['ciudad']) ?></strong>
+                            <i class="bi bi-geo-alt"></i> <strong><?= htmlspecialchars($s['ciudad_nombre'] ?? $s['ciudad'] ?? 'Sin ciudad') ?></strong>
                         </p>
                         <p class="mb-1"><i class="bi bi-person"></i> <span id="resp-<?= $s['id'] ?>"><?= htmlspecialchars($s['responsable'] ?? 'Sin responsable') ?></span></p>
                         <p class="mb-1"><i class="bi bi-pin-map"></i> <span id="dir-<?= $s['id'] ?>"><?= htmlspecialchars($s['direccion'] ?: 'Sin dirección') ?></span></p>

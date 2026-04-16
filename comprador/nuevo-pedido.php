@@ -12,8 +12,10 @@ if ($_SESSION['rol'] !== 'comprador') {
 $user_id = $_SESSION['user_id'];
 $sede_id = $_SESSION['sede_id'] ?? null;
 
-$stmt = $pdo->prepare("SELECT s.*, u.nombre as responsable FROM sedes s 
-    LEFT JOIN usuarios u ON u.sede_id = s.id AND u.rol = 'comprador' 
+$stmt = $pdo->prepare("SELECT s.*, u.nombre as responsable, c.nombre as ciudad_nombre 
+    FROM sedes s 
+    LEFT JOIN usuarios u ON u.sede_id = s.id AND u.rol = 'comprador'
+    LEFT JOIN ciudades c ON s.ciudad_id = c.id 
     WHERE s.id = ?");
 $stmt->execute([$sede_id]);
 $sede = $stmt->fetch();
@@ -73,7 +75,7 @@ foreach ($insumos as $ins) {
         
         <div class="sede-info">
             <strong><i class="bi bi-shop"></i> <?= htmlspecialchars($sede['nombre'] ?? 'Sin sede') ?></strong>
-            <span class="text-muted"> | <?= htmlspecialchars($sede['ciudad'] ?? '') ?></span>
+            <span class="text-muted"> | <?= htmlspecialchars($sede['ciudad_nombre'] ?? '') ?></span>
             <div class="mt-2">
                 <label class="form-label small">Responsable del pedido</label>
                 <input type="text" class="form-control" name="responsable" required 
