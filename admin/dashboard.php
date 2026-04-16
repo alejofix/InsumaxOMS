@@ -36,6 +36,7 @@ $sedes_stats = $stmt->fetchAll();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - INSUMAX</title>
     <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="../css/style.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 </head>
@@ -47,34 +48,34 @@ $sedes_stats = $stmt->fetchAll();
         
         <div class="row mb-4">
             <div class="col-md-3">
-                <div class="card text-center" style="border-left: 4px solid <?= $colors['estados']['recibido'] ?>;">
+                <div class="card text-center" style="border-left: 4px solid <?= $colors['estados']['recibido']['border'] ?>;">
                     <div class="card-body">
                         <div class="text-muted">Recibidos</div>
-                        <div style="font-size: 32px; font-weight: 700; color: <?= $colors['estados']['recibido'] ?>;"><?= $stats['recibido'] ?? 0 ?></div>
+                        <div style="font-size: 32px; font-weight: 700; color: <?= $colors['estados']['recibido']['border'] ?>;"><?= $stats['recibido'] ?? 0 ?></div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card text-center" style="border-left: 4px solid <?= $colors['estados']['proceso'] ?>;">
+                <div class="card text-center" style="border-left: 4px solid <?= $colors['estados']['proceso']['border'] ?>;">
                     <div class="card-body">
                         <div class="text-muted">En Proceso</div>
-                        <div style="font-size: 32px; font-weight: 700; color: <?= $colors['estados']['proceso'] ?>;"><?= $stats['proceso'] ?? 0 ?></div>
+                        <div style="font-size: 32px; font-weight: 700; color: <?= $colors['estados']['proceso']['border'] ?>;"><?= $stats['proceso'] ?? 0 ?></div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card text-center" style="border-left: 4px solid <?= $colors['estados']['pendientes'] ?>;">
+                <div class="card text-center" style="border-left: 4px solid <?= $colors['estados']['pendientes']['border'] ?>;">
                     <div class="card-body">
                         <div class="text-muted">Con Pendientes</div>
-                        <div style="font-size: 32px; font-weight: 700; color: <?= $colors['estados']['pendientes'] ?>;"><?= $stats['pendientes'] ?? 0 ?></div>
+                        <div style="font-size: 32px; font-weight: 700; color: <?= $colors['estados']['pendientes']['border'] ?>;"><?= $stats['pendientes'] ?? 0 ?></div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card text-center" style="border-left: 4px solid <?= $colors['estados']['finalizado'] ?>;">
+                <div class="card text-center" style="border-left: 4px solid <?= $colors['estados']['finalizado']['border'] ?>;">
                     <div class="card-body">
                         <div class="text-muted">Finalizados</div>
-                        <div style="font-size: 32px; font-weight: 700; color: <?= $colors['estados']['finalizado'] ?>;"><?= $stats['finalizado'] ?? 0 ?></div>
+                        <div style="font-size: 32px; font-weight: 700; color: <?= $colors['estados']['finalizado']['border'] ?>;"><?= $stats['finalizado'] ?? 0 ?></div>
                     </div>
                 </div>
             </div>
@@ -137,7 +138,7 @@ $sedes_stats = $stmt->fetchAll();
                 <tr>
                     <td><strong>${t.codigo_ticket}</strong></td>
                     <td>${t.sede_nombre || '-'}</td>
-                    <td><span class="badge" style="background: ${estados[t.estado] || '#666'}">${t.estado.toUpperCase()}</span></td>
+                    <td><span class="badge" style="background-color: ${estados[t.estado]?.bg || '#6c757d'}; color: ${estados[t.estado]?.text || '#fff'};">${t.estado.toUpperCase()}</span></td>
                     <td>${t.fecha_pedido}</td>
                     <td>
                         <button class="btn btn-sm btn-outline-primary" onclick="verTicket(${t.id})">

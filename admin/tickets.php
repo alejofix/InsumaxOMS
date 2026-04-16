@@ -2,6 +2,7 @@
 session_start();
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/auth.php';
+$colors = require __DIR__ . '/../config/colors.php';
 requireAuth();
 
 if ($_SESSION['rol'] !== 'admon') {
@@ -37,6 +38,7 @@ $distribuidores = $pdo->query("SELECT id, nombre FROM usuarios WHERE rol = 'dist
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tickets - INSUMAX</title>
     <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="../css/style.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 </head>
@@ -89,7 +91,7 @@ $distribuidores = $pdo->query("SELECT id, nombre FROM usuarios WHERE rol = 'dist
                         <td><?= htmlspecialchars($t['comprador_nombre'] ?? '-') ?></td>
                         <td><?= htmlspecialchars($t['distribuidor_nombre'] ?? '<span class="text-muted">Sin asignar</span>') ?></td>
                         <td><?= $t['fecha_pedido'] ?></td>
-                        <td><span class="badge bg-<?= $t['estado']=='finalizado'?'success':($t['estado']=='pendientes'?'danger':($t['estado']=='proceso'?'warning':'primary')) ?>"><?= strtoupper($t['estado']) ?></span></td>
+                        <td><span class="badge" style="background-color: <?= $colors['estados'][$t['estado']]['bg'] ?? '#6c757d' ?>; color: <?= $colors['estados'][$t['estado']]['text'] ?? '#fff' ?>;"><?= strtoupper($t['estado']) ?></span></td>
                         <td>
                             <button class="btn btn-sm btn-outline-primary" onclick="verDetalle(<?= $t['id'] ?>)"><i class="bi bi-eye"></i></button>
                             <select class="form-select form-select-sm d-inline-block w-auto" onchange="cambiarEstado(<?= $t['id'] ?>, this.value)">

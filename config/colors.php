@@ -16,9 +16,29 @@ return [
         'Cali'          => '#7B1FA2'
     ],
     'estados' => [
-        'recibido'   => '#1565c0',
-        'proceso'    => '#f57f17',
-        'pendientes' => '#c62828',
-        'finalizado' => '#2e7d32'
+        'recibido' => [
+            'border'  => '#1565c0',
+            'bg'      => '#e3f2fd',
+            'text'    => '#1565c0',
+            'label'   => 'Recibido'
+        ],
+        'proceso' => [
+            'border'  => '#f57f17',
+            'bg'      => '#fff8e1',
+            'text'    => '#f57f17',
+            'label'   => 'En Proceso'
+        ],
+        'pendientes' => [
+            'border'  => '#c62828',
+            'bg'      => '#ffebee',
+            'text'    => '#c62828',
+            'label'   => 'Con Pendientes'
+        ],
+        'finalizado' => [
+            'border'  => '#2e7d32',
+            'bg'      => '#e8f5e9',
+            'text'    => '#2e7d32',
+            'label'   => 'Finalizado'
+        ]
     ]
 ];
