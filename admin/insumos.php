@@ -87,10 +87,10 @@ $unidades = $stmt->fetchAll();
                         <th>Código</th>
                         <th>Grupo</th>
                         <th>Descripción</th>
-                        <th>Und. Compra</th>
+                        <th>Presentación</th>
+                        <th>UND</th>
                         <th>Factor</th>
                         <th>Precio Compra</th>
-                        <th>Precio Venta</th>
                         <th>Precio/KG</th>
                         <th>Acciones</th>
                     </tr>
@@ -98,21 +98,22 @@ $unidades = $stmt->fetchAll();
                 <tbody id="insumos-body">
                     <?php foreach($insumos as $i): 
                         $factor = floatval($i['factor_conversion'] ?? 1);
+                        $presentacion = htmlspecialchars($i['presentacion'] ?? '-');
                     ?>
                     <tr data-id="<?= $i['id'] ?>">
                         <td style="border-left: 3px solid <?= $color_default ?>;"><?= htmlspecialchars($i['codigo'] ?? '') ?></td>
-                        <td><span class="badge" style="background-color: <?= $colores_grupo[$i['grupo']] ?? '#6c757d' ?>;"><?= strtoupper($i['grupo']) ?></span></td>
+                        <td><span class="badge" style="background-color: <?= $colores_grupo[$i['grupo']] ?? '#6c757d' ?>; color: <?= $i['grupo'] === 'quesos' ? '#000' : '#fff' ?>;"><?= strtoupper($i['grupo']) ?></span></td>
                         <td><?= htmlspecialchars($i['descripcion']) ?></td>
+                        <td><small class="text-muted"><?= $presentacion ?></small></td>
                         <td><span class="badge bg-primary"><?= htmlspecialchars($i['unidad_compra'] ?? $i['unidad_medida'] ?? '-') ?></span></td>
                         <td>
                             <?php if ($factor > 1): ?>
-                                <span class="text-dark fw-bold"><?= number_format($factor, 0, ',', '.') ?>g</span>
+                                <strong><?= number_format($factor, 0, ',', '.') ?>g</strong>
                             <?php else: ?>
                                 <span class="text-muted">-</span>
                             <?php endif; ?>
                         </td>
                         <td><?= $i['precio_compra'] ? '$' . number_format($i['precio_compra'], 0, ',', '.') : '-' ?></td>
-                        <td><?= $i['precio_venta'] ? '$' . number_format($i['precio_venta'], 0, ',', '.') : '-' ?></td>
                         <td>
                             <?php if ($factor > 1 && $i['precio_kg']): ?>
                                 <span class="badge bg-success">$<?= number_format($i['precio_kg'], 0, ',', '.') ?>/kg</span>
@@ -383,15 +384,16 @@ $unidades = $stmt->fetchAll();
             var precioKg = i.precio_kg ? '<span class="badge bg-success">$' + fmt(i.precio_kg) + '/kg</span>' : '<span class="text-muted">-</span>';
             var unidadDisplay = '<span class="badge bg-primary">' + (i.unidad_compra || i.unidad_medida || '-') + '</span>';
             var colorGrupo = coloresGrupo[i.grupo] || '#6c757d';
+            var presentacion = i.presentacion || '-';
             
             html += '<tr data-id="' + i.id + '">' +
                 '<td style="border-left: 3px solid ' + color + ';">' + (i.codigo || '') + '</td>' +
                 '<td><span class="badge" style="background-color:' + colorGrupo + '; color:' + (i.grupo === 'quesos' ? '#000' : '#fff') + ';">' + (i.grupo || '').toUpperCase() + '</span></td>' +
                 '<td>' + i.descripcion + '</td>' +
+                '<td><small class="text-muted">' + presentacion + '</small></td>' +
                 '<td>' + unidadDisplay + '</td>' +
                 '<td>' + factorDisplay + '</td>' +
                 '<td>' + (i.precio_compra ? '$' + fmt(i.precio_compra) : '-') + '</td>' +
-                '<td>' + (i.precio_venta ? '$' + fmt(i.precio_venta) : '-') + '</td>' +
                 '<td>' + precioKg + '</td>' +
                 '<td><button class="btn btn-sm btn-outline-primary" onclick="editar(' + i.id + ')"><i class="bi bi-pencil"></i></button>' +
                 ' <button class="btn btn-sm btn-outline-danger" onclick="eliminar(' + i.id + ')"><i class="bi bi-trash"></i></button></td>' +
