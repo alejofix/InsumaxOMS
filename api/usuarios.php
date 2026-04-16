@@ -12,10 +12,10 @@ if ($action === 'list') {
     $rol = $_GET['rol'] ?? null;
     
     if ($rol) {
-        $stmt = $pdo->prepare("SELECT id, nombre, apellido, email, celular, rol, sede_id, activo FROM usuarios WHERE rol = ? ORDER BY nombre");
+        $stmt = $pdo->prepare("SELECT id, nombre, apellido, email, celular, rol, sede_id, ciudad, activo FROM usuarios WHERE rol = ? ORDER BY nombre");
         $stmt->execute([$rol]);
     } else {
-        $stmt = $pdo->query("SELECT id, nombre, apellido, email, celular, rol, sede_id, activo FROM usuarios ORDER BY nombre");
+        $stmt = $pdo->query("SELECT id, nombre, apellido, email, celular, rol, sede_id, ciudad, activo FROM usuarios ORDER BY nombre");
     }
     
     $usuarios = $stmt->fetchAll();
@@ -43,6 +43,7 @@ if ($action === 'save') {
     $celular = trim($_POST['celular'] ?? '');
     $rol = $_POST['rol'] ?? 'comprador';
     $sede_id = $_POST['sede_id'] ?? null;
+    $ciudad = trim($_POST['ciudad'] ?? '');
     $password = $_POST['password'] ?? '';
     
     if (empty($nombre) || empty($email)) {
@@ -52,8 +53,8 @@ if ($action === 'save') {
     
     if ($id) {
         // Update
-        $sql = "UPDATE usuarios SET nombre=?, apellido=?, email=?, celular=?, rol=?, sede_id=?";
-        $params = [$nombre, $apellido, $email, $celular, $rol, $sede_id];
+        $sql = "UPDATE usuarios SET nombre=?, apellido=?, email=?, celular=?, rol=?, sede_id=?, ciudad=?";
+        $params = [$nombre, $apellido, $email, $celular, $rol, $sede_id, $ciudad];
         
         if (!empty($password)) {
             $sql .= ", password_hash=?";
@@ -72,9 +73,9 @@ if ($action === 'save') {
             exit;
         }
         
-        $stmt = $pdo->prepare("INSERT INTO usuarios (nombre, apellido, email, celular, password_hash, rol, sede_id, activo) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, 1)");
-        $stmt->execute([$nombre, $apellido, $email, $celular, password_hash($password, PASSWORD_DEFAULT), $rol, $sede_id]);
+        $stmt = $pdo->prepare("INSERT INTO usuarios (nombre, apellido, email, celular, password_hash, rol, sede_id, ciudad, activo) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)");
+        $stmt->execute([$nombre, $apellido, $email, $celular, password_hash($password, PASSWORD_DEFAULT), $rol, $sede_id, $ciudad]);
     }
     
     echo json_encode(['success' => true]);
