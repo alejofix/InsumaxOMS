@@ -112,6 +112,7 @@ $sedes = $stmt->fetchAll();
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         var basePath = '<?php echo dirname($_SERVER['SCRIPT_NAME']) . '/..'; ?>';
+        var csrfToken = '<?php echo csrfToken(); ?>';
         
         window.editarSede = function(id) {
             var url = basePath + '/api/sedes.php?action=get&id=' + id;
@@ -144,6 +145,7 @@ $sedes = $stmt->fetchAll();
         document.getElementById('form-edit').addEventListener('submit', function(e) {
             e.preventDefault();
             var formData = new FormData(e.target);
+            formData.append('csrf_token', csrfToken);
             var url = basePath + '/api/sedes.php?action=update';
             console.log('POST URL:', url);
             fetch(url, {
@@ -177,6 +179,7 @@ $sedes = $stmt->fetchAll();
             
             var formData = new FormData();
             formData.append('id', id);
+            formData.append('csrf_token', csrfToken);
             var url = basePath + '/api/sedes.php?action=toggle';
             console.log('TOGGLE URL:', url);
             

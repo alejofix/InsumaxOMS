@@ -172,6 +172,7 @@ $user_id = $_SESSION['user_id'];
             fdItem.append('item_id', item.item_id);
             fdItem.append('cantidad_entregada', item.cantidad_entregada);
             fdItem.append('estado_item', item.estado_item);
+            fdItem.append('csrf_token', '<?= csrfToken() ?>');
             await fetch('../api/items.php?action=check', { method: 'POST', body: fdItem });
         }
         
@@ -184,6 +185,7 @@ $user_id = $_SESSION['user_id'];
         
         const fd = new FormData();
         fd.append('ticket_id', ticketId);
+        fd.append('csrf_token', '<?= csrfToken() ?>');
         
         const resp = await fetch('../api/items.php?action=confirm', { method: 'POST', body: fd });
         const r = await resp.json();
