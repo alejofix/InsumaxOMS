@@ -24,15 +24,30 @@ $colores_ciudad = [
 ];
 $color_default = $colores_ciudad[$ciudades[0]['nombre']] ?? '#6c757d';
 
+$colores_grupo = [
+    'carnes' => '#DC3545',
+    'quesos' => '#FFC107',
+    'plaza' => '#28A745',
+    'salsas' => '#FD7E14',
+    'varios' => '#17A2B8',
+    'aseo' => '#6F42C1'
+];
+
 $stmt = $pdo->prepare("
-    SELECT i.*, ip.precio_compra, ip.precio_venta
+    SELECT i.*, ip.precio_compra, ip.precio_venta,
+        u.unidad_compra, u.unidad_base, u.factor_conversion, u.presentacion,
+        ROUND(ip.precio_compra / NULLIF(u.factor_conversion, 0) * 1000, 2) AS precio_kg
     FROM insumos i
     LEFT JOIN insumos_precios ip ON i.id = ip.insumo_id AND ip.ciudad_id = ?
+    LEFT JOIN insumos_unidades u ON i.id = u.insumo_id
     WHERE i.activo = 1
     ORDER BY FIELD(i.grupo, 'carnes', 'quesos', 'plaza', 'salsas', 'varios', 'aseo'), i.descripcion
 ");
 $stmt->execute([$ciudad_default]);
 $insumos = $stmt->fetchAll();
+
+$stmt = $pdo->query("SELECT * FROM unidades_medida WHERE activo = 1 ORDER BY tipo, codigo");
+$unidades = $stmt->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -72,21 +87,39 @@ $insumos = $stmt->fetchAll();
                         <th>Código</th>
                         <th>Grupo</th>
                         <th>Descripción</th>
-                        <th>Unidad</th>
+                        <th>Und. Compra</th>
+                        <th>Factor</th>
                         <th>Precio Compra</th>
                         <th>Precio Venta</th>
+                        <th>Precio/KG</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody id="insumos-body">
-                    <?php foreach($insumos as $i): ?>
+                    <?php foreach($insumos as $i): 
+                        $factor = floatval($i['factor_conversion'] ?? 1);
+                    ?>
                     <tr data-id="<?= $i['id'] ?>">
-                        <td><?= htmlspecialchars($i['codigo'] ?? '') ?></td>
-                        <td><span class="badge bg-secondary"><?= strtoupper($i['grupo']) ?></span></td>
+                        <td style="border-left: 3px solid <?= $color_default ?>;"><?= htmlspecialchars($i['codigo'] ?? '') ?></td>
+                        <td><span class="badge" style="background-color: <?= $colores_grupo[$i['grupo']] ?? '#6c757d' ?>;"><?= strtoupper($i['grupo']) ?></span></td>
                         <td><?= htmlspecialchars($i['descripcion']) ?></td>
-                        <td><?= htmlspecialchars($i['unidad_medida']) ?></td>
-                        <td><?= $i['precio_compra'] ? number_format($i['precio_compra'], 0, ',', '.') : '-' ?></td>
-                        <td><?= $i['precio_venta'] ? number_format($i['precio_venta'], 0, ',', '.') : '-' ?></td>
+                        <td><span class="badge bg-primary"><?= htmlspecialchars($i['unidad_compra'] ?? $i['unidad_medida'] ?? '-') ?></span></td>
+                        <td>
+                            <?php if ($factor > 1): ?>
+                                <span class="text-dark fw-bold"><?= number_format($factor, 0, ',', '.') ?>g</span>
+                            <?php else: ?>
+                                <span class="text-muted">-</span>
+                            <?php endif; ?>
+                        </td>
+                        <td><?= $i['precio_compra'] ? '$' . number_format($i['precio_compra'], 0, ',', '.') : '-' ?></td>
+                        <td><?= $i['precio_venta'] ? '$' . number_format($i['precio_venta'], 0, ',', '.') : '-' ?></td>
+                        <td>
+                            <?php if ($factor > 1 && $i['precio_kg']): ?>
+                                <span class="badge bg-success">$<?= number_format($i['precio_kg'], 0, ',', '.') ?>/kg</span>
+                            <?php else: ?>
+                                <span class="text-muted">-</span>
+                            <?php endif; ?>
+                        </td>
                         <td>
                             <button class="btn btn-sm btn-outline-primary" onclick="editar(<?= $i['id'] ?>)"><i class="bi bi-pencil"></i></button>
                             <button class="btn btn-sm btn-outline-danger" onclick="eliminar(<?= $i['id'] ?>)"><i class="bi bi-trash"></i></button>
@@ -100,7 +133,7 @@ $insumos = $stmt->fetchAll();
 
     <!-- Modal Form -->
     <div class="modal fade" id="formModal" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="form-title"><i class="bi bi-plus-circle"></i> Nuevo Insumo</h5>
@@ -110,12 +143,13 @@ $insumos = $stmt->fetchAll();
                     <div class="modal-body">
                         <input type="hidden" id="insumo-id" name="id">
                         <input type="hidden" id="insumo-ciudad" name="ciudad_id" value="<?= $ciudad_default ?>">
+                        
                         <div class="row g-3">
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label">Código</label>
                                 <input type="text" class="form-control" id="insumo-codigo" name="codigo">
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label">Grupo</label>
                                 <select class="form-select" id="insumo-grupo" name="grupo" required>
                                     <option value="">Seleccionar...</option>
@@ -127,15 +161,53 @@ $insumos = $stmt->fetchAll();
                                     <option value="aseo">Aseo</option>
                                 </select>
                             </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Unidad</label>
-                                <input type="text" class="form-control" id="insumo-unidad" name="unidad_medida" required placeholder="KG, UND...">
+                            <div class="col-md-3">
+                                <label class="form-label">Und. Compra</label>
+                                <select class="form-select" id="insumo-unidad-compra" name="unidad_compra" required>
+                                    <option value="">Seleccionar...</option>
+                                    <?php foreach($unidades as $u): ?>
+                                    <option value="<?= $u['codigo'] ?>" data-factor="<?= $u['a_gramos'] ?>"><?= $u['codigo'] ?> - <?= $u['nombre'] ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Und. Base</label>
+                                <select class="form-select" id="insumo-unidad-base" name="unidad_base">
+                                    <option value="G">G - Gramo</option>
+                                    <option value="ML">ML - Mililitro</option>
+                                    <option value="UND">UND - Unidad</option>
+                                </select>
                             </div>
                         </div>
+
                         <div class="mt-3">
                             <label class="form-label">Descripción</label>
                             <input type="text" class="form-control" id="insumo-descripcion" name="descripcion" required>
                         </div>
+
+                        <div class="row g-3 mt-2">
+                            <div class="col-md-4">
+                                <label class="form-label">Factor (gramos por unidad)</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="insumo-factor" name="factor_conversion" value="1" min="1" step="1">
+                                    <span class="input-group-text">g</span>
+                                </div>
+                                <small class="text-muted">
+                                    <a href="#" onclick="extraerFactor(); return false;"><i class="bi bi-magic"></i> Extraer de descripción</a>
+                                </small>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Presentación</label>
+                                <input type="text" class="form-control" id="insumo-presentacion" name="presentacion" placeholder="Ej: Balde 5kg">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Precio/KG (calculado)</label>
+                                <div class="form-control bg-light" id="precio-kg-display" style="height: calc(2.25rem + 2px);">
+                                    <span class="text-muted">Ingrese precio</span>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="row g-3 mt-2">
                             <div class="col-md-6">
                                 <label class="form-label">Precio Compra</label>
@@ -167,30 +239,123 @@ $insumos = $stmt->fetchAll();
     var ciudadActual = <?= $ciudad_default ?>;
     var csrfToken = '<?php echo csrfToken(); ?>';
 
-    document.getElementById('ciudad-select').addEventListener('change', function() {
-        ciudadActual = this.value;
-        document.getElementById('insumo-ciudad').value = ciudadActual;
-        var selectedOption = this.options[this.selectedIndex];
-        var color = selectedOption.getAttribute('data-color') || '#6c757d';
-        var nombre = selectedOption.getAttribute('data-nombre') || '';
+    var coloresGrupo = {
+        'carnes': '#DC3545',
+        'quesos': '#FFC107',
+        'plaza': '#28A745',
+        'salsas': '#FD7E14',
+        'varios': '#17A2B8',
+        'aseo': '#6F42C1'
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var ciudadSelect = document.getElementById('ciudad-select');
+        if (ciudadSelect) {
+            ciudadSelect.addEventListener('change', function() {
+                ciudadActual = this.value;
+                document.getElementById('insumo-ciudad').value = ciudadActual;
+                var selectedOption = this.options[this.selectedIndex];
+                var color = selectedOption.getAttribute('data-color') || '#6c757d';
+                var nombre = selectedOption.getAttribute('data-nombre') || '';
+                
+                this.style.borderLeftColor = color;
+                
+                var infoAlert = document.getElementById('ciudad-info');
+                infoAlert.style.borderLeftColor = color;
+                infoAlert.innerHTML = '<i class="bi bi-geo-alt-fill" style="color: ' + color + ';"></i> Precios para <strong style="color: ' + color + ';">' + nombre + '</strong>. Seleccione otra ciudad para ver/editar sus precios.';
+                
+                cargarInsumos();
+            });
+        }
+
+        var form = document.getElementById('insumo-form');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                guardarInsumo();
+            });
+        }
+
+        var unidadSelect = document.getElementById('insumo-unidad-compra');
+        if (unidadSelect) {
+            unidadSelect.addEventListener('change', function() {
+                if (this.value === 'KG') {
+                    document.getElementById('insumo-factor').value = 1000;
+                    document.getElementById('insumo-unidad-base').value = 'G';
+                    actualizarPrecioKG();
+                } else if (this.value === 'GL') {
+                    document.getElementById('insumo-factor').value = 3785;
+                    document.getElementById('insumo-unidad-base').value = 'ML';
+                    actualizarPrecioKG();
+                } else if (this.value === 'FILETE') {
+                    document.getElementById('insumo-factor').value = 120;
+                    document.getElementById('insumo-unidad-base').value = 'G';
+                    actualizarPrecioKG();
+                }
+            });
+        }
+
+        var pcompra = document.getElementById('insumo-pcompra');
+        if (pcompra) pcompra.addEventListener('input', actualizarPrecioKG);
         
-        this.style.borderLeftColor = color;
-        
-        var infoAlert = document.getElementById('ciudad-info');
-        infoAlert.style.borderLeftColor = color;
-        infoAlert.innerHTML = '<i class="bi bi-geo-alt-fill" style="color: ' + color + ';"></i> Precios para <strong style="color: ' + color + ';">' + nombre + '</strong>. Seleccione otra ciudad para ver/editar sus precios.';
-        
-        cargarInsumos();
+        var factor = document.getElementById('insumo-factor');
+        if (factor) factor.addEventListener('input', actualizarPrecioKG);
     });
 
-    document.getElementById('insumo-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        guardarInsumo();
-    });
+    function actualizarPrecioKG() {
+        var precio = parseFloat(document.getElementById('insumo-pcompra').value) || 0;
+        var factor = parseFloat(document.getElementById('insumo-factor').value) || 1;
+        var display = document.getElementById('precio-kg-display');
+        
+        if (precio > 0 && factor > 0) {
+            var precioKg = precio / factor * 1000;
+            display.innerHTML = '<strong class="text-success">$' + precioKg.toLocaleString('es-CO', {maximumFractionDigits: 0}) + '/kg</strong>';
+        } else {
+            display.innerHTML = '<span class="text-muted">N/A</span>';
+        }
+    }
+
+    function extraerFactor() {
+        var descripcion = document.getElementById('insumo-descripcion').value;
+        var patrones = [
+            /(\d+(?:[.,]\d+)?)\s*kg/i,
+            /(\d+(?:[.,]\d+)?)\s*kilogramo/i,
+            /(\d+(?:[.,]\d+)?)\s*lb/i,
+            /(\d+(?:[.,]\d+)?)\s*libra/i,
+            /(\d+(?:[.,]\d+)?)\s*l(?!i)/i,
+            /(\d+(?:[.,]\d+)?)\s*litro/i
+        ];
+        
+        for (var i = 0; i < patrones.length; i++) {
+            var match = descripcion.match(patrones[i]);
+            if (match) {
+                var valor = parseFloat(match[1].replace(',', '.'));
+                var unidad = match[0].toLowerCase();
+                var factor = valor;
+                
+                if (unidad.includes('kg') || unidad.includes('kilogramo')) {
+                    factor = valor * 1000;
+                    document.getElementById('insumo-unidad-base').value = 'G';
+                } else if (unidad.includes('lb') || unidad.includes('libra')) {
+                    factor = Math.round(valor * 453.592);
+                    document.getElementById('insumo-unidad-base').value = 'G';
+                } else if (unidad.includes('l') && !unidad.includes('li')) {
+                    factor = valor * 1000;
+                    document.getElementById('insumo-unidad-base').value = 'ML';
+                }
+                
+                document.getElementById('insumo-factor').value = Math.round(factor);
+                actualizarPrecioKG();
+                alert('Factor extraído: ' + Math.round(factor) + 'g');
+                return;
+            }
+        }
+        alert('No se encontró peso en la descripción. Ingréselo manualmente.');
+    }
 
     function cargarInsumos() {
         var url = basePath + '/api/insumos.php?action=list&ciudad_id=' + ciudadActual;
-        document.getElementById('insumos-body').innerHTML = '<tr><td colspan="7" class="text-center py-3"><i class="bi bi-hourglass-split"></i> Cargando...</td></tr>';
+        document.getElementById('insumos-body').innerHTML = '<tr><td colspan="9" class="text-center py-3"><i class="bi bi-hourglass-split"></i> Cargando...</td></tr>';
         
         fetch(url)
             .then(function(resp) { return resp.json(); })
@@ -208,21 +373,35 @@ $insumos = $stmt->fetchAll();
         var selectEl = document.getElementById('ciudad-select');
         var color = selectEl.options[selectEl.selectedIndex].getAttribute('data-color') || '#6c757d';
         var html = '';
+        
         data.forEach(function(i) {
             var fmt = function(n) {
                 return n ? parseFloat(n).toLocaleString('es-CO') : '-';
             };
+            var factor = parseFloat(i.factor_conversion) || 1;
+            var factorDisplay = factor > 1 ? '<strong>' + fmt(factor) + 'g</strong>' : '<span class="text-muted">-</span>';
+            var precioKg = i.precio_kg ? '<span class="badge bg-success">$' + fmt(i.precio_kg) + '/kg</span>' : '<span class="text-muted">-</span>';
+            var unidadDisplay = '<span class="badge bg-primary">' + (i.unidad_compra || i.unidad_medida || '-') + '</span>';
+            var colorGrupo = coloresGrupo[i.grupo] || '#6c757d';
+            
             html += '<tr data-id="' + i.id + '">' +
                 '<td style="border-left: 3px solid ' + color + ';">' + (i.codigo || '') + '</td>' +
-                '<td><span class="badge bg-secondary">' + (i.grupo || '').toUpperCase() + '</span></td>' +
+                '<td><span class="badge" style="background-color:' + colorGrupo + '; color:' + (i.grupo === 'quesos' ? '#000' : '#fff') + ';">' + (i.grupo || '').toUpperCase() + '</span></td>' +
                 '<td>' + i.descripcion + '</td>' +
-                '<td>' + i.unidad_medida + '</td>' +
-                '<td>' + fmt(i.precio_compra) + '</td>' +
-                '<td>' + fmt(i.precio_venta) + '</td>' +
+                '<td>' + unidadDisplay + '</td>' +
+                '<td>' + factorDisplay + '</td>' +
+                '<td>' + (i.precio_compra ? '$' + fmt(i.precio_compra) : '-') + '</td>' +
+                '<td>' + (i.precio_venta ? '$' + fmt(i.precio_venta) : '-') + '</td>' +
+                '<td>' + precioKg + '</td>' +
                 '<td><button class="btn btn-sm btn-outline-primary" onclick="editar(' + i.id + ')"><i class="bi bi-pencil"></i></button>' +
                 ' <button class="btn btn-sm btn-outline-danger" onclick="eliminar(' + i.id + ')"><i class="bi bi-trash"></i></button></td>' +
                 '</tr>';
         });
+        
+        if (html === '') {
+            html = '<tr><td colspan="9" class="text-center py-3 text-muted">No hay insumos registrados</td></tr>';
+        }
+        
         tbody.innerHTML = html;
     }
 
@@ -233,17 +412,23 @@ $insumos = $stmt->fetchAll();
         document.getElementById('insumo-codigo').value = '';
         document.getElementById('insumo-grupo').value = '';
         document.getElementById('insumo-descripcion').value = '';
-        document.getElementById('insumo-unidad').value = '';
+        document.getElementById('insumo-unidad-compra').value = '';
+        document.getElementById('insumo-unidad-base').value = 'G';
+        document.getElementById('insumo-factor').value = '1';
+        document.getElementById('insumo-presentacion').value = '';
         document.getElementById('insumo-pcompra').value = '';
         document.getElementById('insumo-pventa').value = '';
+        document.getElementById('precio-kg-display').innerHTML = '<span class="text-muted">Ingrese precio</span>';
         new bootstrap.Modal(document.getElementById('formModal')).show();
     }
 
     function editar(id) {
         var url = basePath + '/api/insumos.php?action=get&id=' + id + '&ciudad_id=' + ciudadActual;
+        console.log('Cargando insumo ID:', id);
         fetch(url)
             .then(function(resp) { return resp.json(); })
             .then(function(res) {
+                console.log('Datos recibidos:', res);
                 if (!res.success) {
                     alert('Error cargando insumo');
                     return;
@@ -255,10 +440,21 @@ $insumos = $stmt->fetchAll();
                 document.getElementById('insumo-codigo').value = i.codigo || '';
                 document.getElementById('insumo-grupo').value = i.grupo;
                 document.getElementById('insumo-descripcion').value = i.descripcion;
-                document.getElementById('insumo-unidad').value = i.unidad_medida;
+                document.getElementById('insumo-unidad-compra').value = i.unidad_compra || i.unidad_medida || '';
+                document.getElementById('insumo-unidad-base').value = i.unidad_base || 'G';
+                document.getElementById('insumo-factor').value = i.factor_conversion || 1;
+                document.getElementById('insumo-presentacion').value = i.presentacion || '';
                 document.getElementById('insumo-pcompra').value = i.precio_compra || '';
                 document.getElementById('insumo-pventa').value = i.precio_venta || '';
-                new bootstrap.Modal(document.getElementById('formModal')).show();
+                console.log('Precio compra:', i.precio_compra);
+                console.log('Precio venta:', i.precio_venta);
+                actualizarPrecioKG();
+                var modal = new bootstrap.Modal(document.getElementById('formModal'));
+                modal.show();
+            })
+            .catch(function(err) {
+                console.error('Error:', err);
+                alert('Error al cargar insumo');
             });
     }
 
