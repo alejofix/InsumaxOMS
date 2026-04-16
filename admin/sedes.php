@@ -3,6 +3,7 @@ session_start();
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/csrf.php';
+$colors = require __DIR__ . '/../config/colors.php';
 requireAuth();
 
 if ($_SESSION['rol'] !== 'admon') {
@@ -12,14 +13,6 @@ if ($_SESSION['rol'] !== 'admon') {
 
 $stmt = $pdo->query("SELECT * FROM sedes ORDER BY activa DESC, ciudad, nombre");
 $sedes = $stmt->fetchAll();
-
-$colores_ciudad = [
-    'Bogotá' => '#1E3A5F',
-    'Medellín' => '#00897B',
-    'Pereira' => '#F57C00',
-    'Barranquilla' => '#C62828',
-    'Cali' => '#7B1FA2'
-];
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -41,7 +34,7 @@ $colores_ciudad = [
 
         <div class="row">
             <?php foreach($sedes as $s): 
-                $color_ciudad = $colores_ciudad[$s['ciudad']] ?? '#6c757d';
+                $color_ciudad = $colors['ciudades'][$s['ciudad']] ?? '#6c757d';
             ?>
             <div class="col-md-4 mb-3">
                 <div class="card h-100 <?= !$s['activa'] ? 'opacity-75' : '' ?>" style="border-left: 4px solid <?= $color_ciudad ?>;">

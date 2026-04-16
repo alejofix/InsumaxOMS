@@ -5,6 +5,9 @@ require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/csrf.php';
 requireAuth();
 
+$colors = require __DIR__ . '/../config/colors.php';
+$enums = require __DIR__ . '/../config/enums.php';
+
 if ($_SESSION['rol'] !== 'admon') {
     header('Location: ../login.php');
     exit;
@@ -14,24 +17,7 @@ $stmt = $pdo->query("SELECT id, nombre FROM ciudades WHERE activa = 1 ORDER BY n
 $ciudades = $stmt->fetchAll();
 
 $ciudad_default = $ciudades[0]['id'] ?? 0;
-
-$colores_ciudad = [
-    'Bogotá' => '#1E3A5F',
-    'Medellín' => '#00897B',
-    'Pereira' => '#F57C00',
-    'Barranquilla' => '#C62828',
-    'Cali' => '#7B1FA2'
-];
-$color_default = $colores_ciudad[$ciudades[0]['nombre']] ?? '#6c757d';
-
-$colores_grupo = [
-    'carnes' => '#DC3545',
-    'quesos' => '#FFC107',
-    'plaza' => '#28A745',
-    'salsas' => '#FD7E14',
-    'varios' => '#17A2B8',
-    'aseo' => '#6F42C1'
-];
+$color_default = $colors['ciudades'][$ciudades[0]['nombre']] ?? '#6c757d';
 
 $stmt = $pdo->prepare("
     SELECT i.*, ip.precio_compra, ip.precio_venta,
@@ -41,7 +27,7 @@ $stmt = $pdo->prepare("
     LEFT JOIN insumos_precios ip ON i.id = ip.insumo_id AND ip.ciudad_id = ?
     LEFT JOIN insumos_unidades u ON i.id = u.insumo_id
     WHERE i.activo = 1
-    ORDER BY FIELD(i.grupo, 'carnes', 'quesos', 'plaza', 'salsas', 'varios', 'aseo'), i.descripcion
+    ORDER BY FIELD(i.grupo, '" . implode("','", $enums['grupos']) . "'), i.descripcion
 ");
 $stmt->execute([$ciudad_default]);
 $insumos = $stmt->fetchAll();
@@ -67,7 +53,7 @@ $unidades = $stmt->fetchAll();
                 <h4><i class="bi bi-box-seam"></i> Catálogo de Insumos</h4>
                 <select id="ciudad-select" class="form-select form-select-sm" style="width: 160px; border-left: 4px solid <?= $color_default ?>;">
                     <?php foreach($ciudades as $c): 
-                        $color = $colores_ciudad[$c['nombre']] ?? '#6c757d';
+                        $color = $colors['ciudades'][$c['nombre']] ?? '#6c757d';
                     ?>
                     <option value="<?= $c['id'] ?>" data-color="<?= $color ?>" data-nombre="<?= $c['nombre'] ?>" <?= $c['id'] == $ciudad_default ? 'selected' : '' ?>><?= htmlspecialchars($c['nombre']) ?></option>
                     <?php endforeach; ?>
@@ -85,12 +71,9 @@ $unidades = $stmt->fetchAll();
                 <span class="input-group-text bg-white"><i class="bi bi-tag"></i></span>
                 <select id="filtro-grupo" class="form-select">
                     <option value="">Todos los grupos</option>
-                    <option value="carnes">Carnes</option>
-                    <option value="quesos">Quesos</option>
-                    <option value="plaza">Plaza</option>
-                    <option value="salsas">Salsas</option>
-                    <option value="varios">Varios</option>
-                    <option value="aseo">Aseo</option>
+                    <?php foreach($enums['grupos'] as $g): ?>
+                    <option value="<?= $g ?>"><?= ucfirst($g) ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
             <span id="contador-insumos" class="text-muted small"></span>
@@ -122,7 +105,7 @@ $unidades = $stmt->fetchAll();
                     ?>
                     <tr data-id="<?= $i['id'] ?>" data-grupo="<?= $i['grupo'] ?>">
                         <td style="border-left: 3px solid <?= $color_default ?>;"><?= htmlspecialchars($i['codigo'] ?? '') ?></td>
-                        <td><span class="badge" style="background-color: <?= $colores_grupo[$i['grupo']] ?? '#6c757d' ?>; color: <?= $i['grupo'] === 'quesos' ? '#000' : '#fff' ?>;"><?= strtoupper($i['grupo']) ?></span></td>
+                        <td><span class="badge" style="background-color: <?= $colors['grupos'][$i['grupo']] ?? '#6c757d' ?>; color: <?= $i['grupo'] === 'quesos' ? '#000' : '#fff' ?>;"><?= strtoupper($i['grupo']) ?></span></td>
                         <td><?= htmlspecialchars($i['descripcion']) ?></td>
                         <td><small class="text-muted"><?= $presentacion ?></small></td>
                         <td><span class="badge bg-primary"><?= htmlspecialchars($i['unidad_compra'] ?? $i['unidad_medida'] ?? '-') ?></span></td>
@@ -174,12 +157,9 @@ $unidades = $stmt->fetchAll();
                                 <label class="form-label">Grupo</label>
                                 <select class="form-select" id="insumo-grupo" name="grupo" required>
                                     <option value="">Seleccionar...</option>
-                                    <option value="carnes">Carnes</option>
-                                    <option value="quesos">Quesos</option>
-                                    <option value="plaza">Plaza</option>
-                                    <option value="salsas">Salsas</option>
-                                    <option value="varios">Varios</option>
-                                    <option value="aseo">Aseo</option>
+                                    <?php foreach($enums['grupos'] as $g): ?>
+                                    <option value="<?= $g ?>"><?= ucfirst($g) ?></option>
+                                    <?php endforeach; ?>
                                 </select>
                             </div>
                             <div class="col-md-3">
@@ -260,14 +240,7 @@ $unidades = $stmt->fetchAll();
     var ciudadActual = <?= $ciudad_default ?>;
     var csrfToken = '<?php echo csrfToken(); ?>';
 
-    var coloresGrupo = {
-        'carnes': '#DC3545',
-        'quesos': '#FFC107',
-        'plaza': '#28A745',
-        'salsas': '#FD7E14',
-        'varios': '#17A2B8',
-        'aseo': '#6F42C1'
-    };
+    var coloresGrupo = <?= json_encode($colors['grupos']) ?>;
 
     document.addEventListener('DOMContentLoaded', function() {
         var ciudadSelect = document.getElementById('ciudad-select');

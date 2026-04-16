@@ -2,6 +2,7 @@
 session_start();
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/auth.php';
+$colors = require __DIR__ . '/../config/colors.php';
 requireAuth();
 
 if ($_SESSION['rol'] !== 'admon') {
@@ -14,7 +15,7 @@ $stmt = $pdo->query("SELECT
     SUM(CASE WHEN estado = 'recibido' THEN 1 ELSE 0 END) as recibido,
     SUM(CASE WHEN estado = 'proceso' THEN 1 ELSE 0 END) as proceso,
     SUM(CASE WHEN estado = 'pendientes' THEN 1 ELSE 0 END) as pendientes,
-    SUM(CASE WHEN estado = 'finalizado' THEN 1 ELSE 0 END) as finaleado
+    SUM(CASE WHEN estado = 'finalizado' THEN 1 ELSE 0 END) as finalizado
 FROM tickets WHERE DATE(created_at) = CURDATE()");
 $stats = $stmt->fetch();
 
@@ -46,34 +47,34 @@ $sedes_stats = $stmt->fetchAll();
         
         <div class="row mb-4">
             <div class="col-md-3">
-                <div class="card text-center" style="border-left: 4px solid #1565c0;">
+                <div class="card text-center" style="border-left: 4px solid <?= $colors['estados']['recibido'] ?>;">
                     <div class="card-body">
                         <div class="text-muted">Recibidos</div>
-                        <div style="font-size: 32px; font-weight: 700; color: #1565c0;"><?= $stats['recibido'] ?? 0 ?></div>
+                        <div style="font-size: 32px; font-weight: 700; color: <?= $colors['estados']['recibido'] ?>;"><?= $stats['recibido'] ?? 0 ?></div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card text-center" style="border-left: 4px solid #f57f17;">
+                <div class="card text-center" style="border-left: 4px solid <?= $colors['estados']['proceso'] ?>;">
                     <div class="card-body">
                         <div class="text-muted">En Proceso</div>
-                        <div style="font-size: 32px; font-weight: 700; color: #f57f17;"><?= $stats['proceso'] ?? 0 ?></div>
+                        <div style="font-size: 32px; font-weight: 700; color: <?= $colors['estados']['proceso'] ?>;"><?= $stats['proceso'] ?? 0 ?></div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card text-center" style="border-left: 4px solid #c62828;">
+                <div class="card text-center" style="border-left: 4px solid <?= $colors['estados']['pendientes'] ?>;">
                     <div class="card-body">
                         <div class="text-muted">Con Pendientes</div>
-                        <div style="font-size: 32px; font-weight: 700; color: #c62828;"><?= $stats['pendientes'] ?? 0 ?></div>
+                        <div style="font-size: 32px; font-weight: 700; color: <?= $colors['estados']['pendientes'] ?>;"><?= $stats['pendientes'] ?? 0 ?></div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card text-center" style="border-left: 4px solid #2e7d32;">
+                <div class="card text-center" style="border-left: 4px solid <?= $colors['estados']['finalizado'] ?>;">
                     <div class="card-body">
                         <div class="text-muted">Finalizados</div>
-                        <div style="font-size: 32px; font-weight: 700; color: #2e7d32;"><?= $stats['finaleado'] ?? 0 ?></div>
+                        <div style="font-size: 32px; font-weight: 700; color: <?= $colors['estados']['finalizado'] ?>;"><?= $stats['finalizado'] ?? 0 ?></div>
                     </div>
                 </div>
             </div>
@@ -130,7 +131,7 @@ $sedes_stats = $stmt->fetchAll();
             if (!result.success) return;
             
             const tbody = document.querySelector('#tabla-tickets tbody');
-            const estados = { recibido: '#1565c0', proceso: '#f57f17', pendientes: '#c62828', finalizedo: '#2e7d32' };
+            const estados = <?= json_encode($colors['estados']) ?>;
             
             tbody.innerHTML = result.data.slice(0, 10).map(t => `
                 <tr>
