@@ -31,6 +31,16 @@ if ($action === 'create') {
     $sede_id = $_SESSION['sede_id'] ?? 1;
     $user_id = $_SESSION['user_id'];
     
+    // Verificar que el usuario esté activo
+    $stmt_check = $pdo->prepare("SELECT activo FROM usuarios WHERE id = ?");
+    $stmt_check->execute([$user_id]);
+    $user = $stmt_check->fetch();
+    
+    if (!$user || $user['activo'] != 1) {
+        echo json_encode(['success' => false, 'error' => 'Usuario inactivo. Contacte al administrador.']);
+        exit;
+    }
+    
     // Generar código ticket: INS-YYYYMMDD-XXX
     $dateStr = date('Ymd');
     $stmt = $pdo->prepare("SELECT MAX(CAST(SUBSTRING(codigo_ticket, 13, 3) AS UNSIGNED)) as max_num 
@@ -99,14 +109,14 @@ if ($action === 'list') {
             $stmt = $pdo->prepare("SELECT t.*, s.nombre as sede_nombre, s.ciudad 
                 FROM tickets t 
                 JOIN sedes s ON t.sede_id = s.id 
-                WHERE t.comprador_id = ? 
+                WHERE t.comprador_id = ? AND s.activa = 1
                 ORDER BY t.created_at DESC");
             $stmt->execute([$user_id]);
         } elseif ($rol === 'dist') {
             $stmt = $pdo->prepare("SELECT t.*, s.nombre as sede_nombre, s.ciudad 
                 FROM tickets t 
                 JOIN sedes s ON t.sede_id = s.id 
-                WHERE t.distribuidor_id = ? 
+                WHERE t.distribuidor_id = ? AND s.activa = 1
                 ORDER BY t.created_at DESC");
             $stmt->execute([$user_id]);
         } else {

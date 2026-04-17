@@ -2,6 +2,7 @@
 session_start();
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/auth.php';
+require_once __DIR__ . '/../config/csrf.php';
 
 header('Content-Type: application/json');
 requireAuth();
@@ -89,6 +90,52 @@ if ($action === 'delete') {
     $id = $_POST['id'] ?? 0;
     $stmt = $pdo->prepare("UPDATE usuarios SET activo = 0 WHERE id = ?");
     $stmt->execute([$id]);
+    
+    echo json_encode(['success' => true]);
+    exit;
+}
+
+if ($action === 'toggle') {
+    requireCsrf();
+    requireRole('admon');
+    
+    $id = $_POST['id'] ?? 0;
+    
+    try {
+        $stmt = $pdo->prepare("SELECT activo FROM usuarios WHERE id = ?");
+        $stmt->execute([$id]);
+        $usuario = $stmt->fetch();
+        
+        if (!$usuario) {
+            echo json_encode(['success' => false, 'error' => 'Usuario no encontrado']);
+            exit;
+        }
+        
+        $nuevoEstado = $usuario['activo'] ? 0 : 1;
+        $stmt = $pdo->prepare("UPDATE usuarios SET activo = ? WHERE id = ?");
+        $stmt->execute([$nuevoEstado, $id]);
+        
+        echo json_encode(['success' => true, 'activo' => $nuevoEstado]);
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($action === 'changePassword') {
+    requireCsrf();
+    requireRole('admon');
+    
+    $id = $_POST['id'] ?? 0;
+    $password = $_POST['password'] ?? '';
+    
+    if (empty($password)) {
+        echo json_encode(['success' => false, 'error' => 'Password requerido']);
+        exit;
+    }
+    
+    $stmt = $pdo->prepare("UPDATE usuarios SET password_hash = ? WHERE id = ?");
+    $stmt->execute([password_hash($password, PASSWORD_DEFAULT), $id]);
     
     echo json_encode(['success' => true]);
     exit;

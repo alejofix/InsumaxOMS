@@ -3,6 +3,7 @@ session_start();
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/csrf.php';
+$colors = require __DIR__ . '/../config/colors.php';
 requireAuth();
 
 if ($_SESSION['rol'] !== 'admon') {
@@ -10,7 +11,7 @@ if ($_SESSION['rol'] !== 'admon') {
     exit;
 }
 
-$stmt = $pdo->query("SELECT u.*, s.nombre as sede_nombre FROM usuarios u LEFT JOIN sedes s ON u.sede_id = s.id WHERE u.activo = 1 ORDER BY u.nombre");
+$stmt = $pdo->query("SELECT u.*, s.nombre as sede_nombre FROM usuarios u LEFT JOIN sedes s ON u.sede_id = s.id ORDER BY u.activo DESC, u.nombre");
 $usuarios = $stmt->fetchAll();
 $sedes = $pdo->query("SELECT id, nombre, ciudad FROM sedes WHERE activa = 1")->fetchAll();
 $ciudades = $pdo->query("SELECT DISTINCT ciudad FROM sedes WHERE activa = 1 ORDER BY ciudad")->fetchAll(PDO::FETCH_COLUMN);
@@ -48,15 +49,31 @@ $ciudades = $pdo->query("SELECT DISTINCT ciudad FROM sedes WHERE activa = 1 ORDE
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach($usuarios as $u): ?>
-                    <tr id="row-<?= $u['id'] ?>">
-                        <td><?= htmlspecialchars($u['nombre'] . ' ' . ($u['apellido'] ?? '')) ?></td>
+                    <?php foreach($usuarios as $u): 
+                        $color_ciudad = $colors['ciudades'][$u['ciudad']] ?? '#6c757d';
+                        $esta_inactivo = !$u['activo'];
+                    ?>
+                    <tr id="row-<?= $u['id'] ?>" class="<?= $esta_inactivo ? 'table-secondary' : '' ?>" style="border-left: 4px solid <?= $esta_inactivo ? '#6c757d' : $color_ciudad ?>;">
+                        <td>
+                            <?php if ($esta_inactivo): ?>
+                            <span class="badge bg-secondary me-1">INACTIVO</span>
+                            <?php endif; ?>
+                            <span class="<?= $esta_inactivo ? 'text-muted text-decoration-line-through' : '' ?>"><?= htmlspecialchars($u['nombre'] . ' ' . ($u['apellido'] ?? '')) ?></span>
+                        </td>
                         <td><?= htmlspecialchars($u['email']) ?></td>
                         <td><?= htmlspecialchars($u['celular'] ?? '-') ?></td>
                         <td><span class="badge bg-<?= $u['rol']=='admon'?'danger':($u['rol']=='dist'?'primary':'success') ?>"><?= strtoupper($u['rol']) ?></span></td>
-                        <td id="ciudad-<?= $u['id'] ?>"><?= htmlspecialchars($u['ciudad'] ?? '-') ?></td>
+                        <td id="ciudad-<?= $u['id'] ?>" style="color: <?= $color_ciudad ?>; font-weight: 500;"><?= htmlspecialchars($u['ciudad'] ?? '-') ?></td>
                         <td id="sede-<?= $u['id'] ?>"><?= htmlspecialchars($u['sede_nombre'] ?? '-') ?></td>
                         <td>
+                            <?php if ($u['rol'] !== 'admon'): ?>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="toggleUsuario(<?= $u['id'] ?>, <?= $u['activo'] ?>)" title="<?= $u['activo'] ? 'Ocultar' : 'Mostrar' ?>">
+                                <i class="bi <?= $u['activo'] ? 'bi-eye' : 'bi-eye-slash' ?>"></i>
+                            </button>
+                            <?php endif; ?>
+                            <button class="btn btn-sm btn-outline-warning" onclick="cambiarPassword(<?= $u['id'] ?>)" title="Cambiar Password">
+                                <i class="bi bi-key"></i>
+                            </button>
                             <button class="btn btn-sm btn-outline-primary" onclick="editar(<?= $u['id'] ?>)"><i class="bi bi-pencil"></i></button>
                         </td>
                     </tr>
@@ -127,6 +144,36 @@ $ciudades = $pdo->query("SELECT DISTINCT ciudad FROM sedes WHERE activa = 1 ORDE
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                         <button type="submit" class="btn btn-insumax"><i class="bi bi-check"></i> Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Cambiar Password -->
+    <div class="modal fade" id="passwordModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-key"></i> Cambiar Password</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="form-password">
+                    <div class="modal-body">
+                        <input type="hidden" id="pass-user-id" name="id">
+                        <div class="mb-3">
+                            <label class="form-label">Nueva Password</label>
+                            <input type="password" class="form-control" id="pass-password" name="password" required minlength="6">
+                            <small class="text-muted">Mínimo 6 caracteres</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Confirmar Password</label>
+                            <input type="password" class="form-control" id="pass-confirm" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-insumax"><i class="bi bi-check"></i> Cambiar</button>
                     </div>
                 </form>
             </div>
@@ -222,6 +269,75 @@ $ciudades = $pdo->query("SELECT DISTINCT ciudad FROM sedes WHERE activa = 1 ORDE
             .then(function(result) {
                 if (result.success) {
                     location.reload();
+                } else {
+                    alert('Error: ' + (result.error || 'desconocido'));
+                }
+            })
+            .catch(function(err) {
+                alert('Error: ' + err.message);
+            });
+        });
+
+        window.toggleUsuario = function(id, activo) {
+            var accion = activo ? 'ocultar' : 'mostrar';
+            if (!confirm('¿Desea ' + accion + ' este usuario?\nLos usuarios ocultos no podrán crear pedidos.')) return;
+            
+            var formData = new FormData();
+            formData.append('id', id);
+            formData.append('csrf_token', csrfToken);
+            
+            fetch(basePath + '/api/usuarios.php?action=toggle', {
+                method: 'POST',
+                body: formData
+            })
+            .then(function(resp) {
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                return resp.json();
+            })
+            .then(function(result) {
+                if (result.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + (result.error || 'desconocido'));
+                }
+            })
+            .catch(function(err) {
+                console.error(err);
+                alert('Error al cambiar estado: ' + err.message);
+            });
+        };
+
+        window.cambiarPassword = function(id) {
+            document.getElementById('pass-user-id').value = id;
+            document.getElementById('pass-password').value = '';
+            document.getElementById('pass-confirm').value = '';
+            new bootstrap.Modal(document.getElementById('passwordModal')).show();
+        };
+
+        document.getElementById('form-password').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var password = document.getElementById('pass-password').value;
+            var confirm = document.getElementById('pass-confirm').value;
+            
+            if (password !== confirm) {
+                alert('Las passwords no coinciden');
+                return;
+            }
+            
+            var formData = new FormData();
+            formData.append('id', document.getElementById('pass-user-id').value);
+            formData.append('password', password);
+            formData.append('csrf_token', csrfToken);
+            
+            fetch(basePath + '/api/usuarios.php?action=changePassword', {
+                method: 'POST',
+                body: formData
+            })
+            .then(function(resp) { return resp.json(); })
+            .then(function(result) {
+                if (result.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('passwordModal')).hide();
+                    alert('Password cambiada correctamente');
                 } else {
                     alert('Error: ' + (result.error || 'desconocido'));
                 }
