@@ -75,7 +75,7 @@ $unidades = $stmt->fetchAll();
         </div>
 
         <div class="table-responsive">
-            <table class="table table-hover table-sm">
+            <table class="table table-hover table-sm fs-6">
                 <thead class="table-light">
                     <tr>
                         <th>Cód</th>
@@ -87,6 +87,7 @@ $unidades = $stmt->fetchAll();
                         <th>$ Compra</th>
                         <th>$ Venta</th>
                         <th>/KG</th>
+                        <th>Act.</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -391,24 +392,26 @@ $unidades = $stmt->fetchAll();
             var grupoShort = (i.grupo || '').substring(0, 3).toUpperCase();
             var rowClass = activo ? '' : 'table-secondary opacity-75';
             var descClass = activo ? 'text-nowrap' : 'text-nowrap text-muted text-decoration-line-through';
+            var fechaActualizado = i.updated_at ? i.updated_at.substring(8,10) + '/' + i.updated_at.substring(5,7) : '-';
             
             html += '<tr data-id="' + i.id + '" data-grupo="' + i.grupo + '" class="' + rowClass + '">' +
-                '<td style="border-left: 3px solid ' + color + ';" class="text-nowrap">' + (i.codigo || '') + '</td>' +
-                '<td><span class="badge" style="background-color:' + colorGrupo + '; color:' + (i.grupo === 'quesos' ? '#000' : '#fff') + ';">' + grupoShort + '</span></td>' +
-                '<td class="' + descClass + '">' + i.descripcion + '</td>' +
-                '<td class="text-muted small">' + presentacion + '</td>' +
-                '<td>' + unidadDisplay + '</td>' +
-                '<td class="text-nowrap">' + factorDisplay + '</td>' +
-                '<td class="text-nowrap">' + (i.precio_compra ? '$' + fmt(i.precio_compra) : '-') + '</td>' +
-                '<td class="text-nowrap">' + (i.precio_venta ? '$' + fmt(i.precio_venta) : '-') + '</td>' +
-                '<td>' + precioKg + '</td>' +
-                '<td><button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="toggleInsumo(' + i.id + ', ' + activo + ')" title="' + titleEye + '"><i class="bi ' + iconEye + '"></i></button>' +
+                '<td style="border-left: 3px solid ' + color + ';" class="text-nowrap py-1 px-1">' + (i.codigo || '') + '</td>' +
+                '<td class="py-1 px-1"><span class="badge" style="background-color:' + colorGrupo + '; color:' + (i.grupo === 'quesos' ? '#000' : '#fff') + ';">' + grupoShort + '</span></td>' +
+                '<td class="' + descClass + ' py-1 px-1">' + i.descripcion + '</td>' +
+                '<td class="text-muted small py-1 px-1">' + presentacion + '</td>' +
+                '<td class="py-1 px-1">' + unidadDisplay + '</td>' +
+                '<td class="text-nowrap py-1 px-1">' + factorDisplay + '</td>' +
+                '<td class="text-nowrap py-1 px-1">' + (i.precio_compra ? '$' + fmt(i.precio_compra) : '-') + '</td>' +
+                '<td class="text-nowrap py-1 px-1">' + (i.precio_venta ? '$' + fmt(i.precio_venta) : '-') + '</td>' +
+                '<td class="py-1 px-1">' + precioKg + '</td>' +
+                '<td class="text-muted small py-1 px-1">' + fechaActualizado + '</td>' +
+                '<td class="py-1 px-1"><button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="toggleInsumo(' + i.id + ', ' + activo + ')" title="' + titleEye + '"><i class="bi ' + iconEye + '"></i></button>' +
                 ' <button class="btn btn-sm btn-outline-primary py-0 px-1" onclick="editar(' + i.id + ')"><i class="bi bi-pencil"></i></button></td>' +
                 '</tr>';
         });
         
         if (html === '') {
-            html = '<tr><td colspan="10" class="text-center py-3 text-muted">No hay insumos registrados</td></tr>';
+            html = '<tr><td colspan="11" class="text-center py-3 text-muted">No hay insumos registrados</td></tr>';
         }
         
         tbody.innerHTML = html;

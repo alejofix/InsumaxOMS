@@ -33,6 +33,7 @@ if ($action === 'list') {
             i.*, 
             ip.precio_compra, 
             ip.precio_venta,
+            ip.updated_at,
             u.unidad_compra,
             u.unidad_base,
             u.factor_conversion,
