@@ -77,11 +77,10 @@ $unidades = $stmt->fetchAll();
         <div class="table-responsive">
             <table class="table table-hover table-sm fs-6">
                 <thead class="table-light">
-                    <tr>
+<tr>
                         <th>Cód</th>
-                        <th>Grupo</th>
                         <th>Descripción</th>
-                        <th>Pres.</th>
+                        <th>Pres</th>
                         <th>UND</th>
                         <th>Fac</th>
                         <th>$ Compra</th>
@@ -285,7 +284,7 @@ $unidades = $stmt->fetchAll();
         
         filas.forEach(function(fila) {
             var grupoFila = (fila.getAttribute('data-grupo') || '').toLowerCase();
-            var descripcion = (fila.querySelector('td:nth-child(3)')?.textContent || '').toLowerCase();
+            var descripcion = (fila.querySelector('td:nth-child(2)')?.textContent || '').toLowerCase();
             var codigo = (fila.querySelector('td:first-child')?.textContent || '').toLowerCase();
             
             var coincideGrupo = grupoSeleccionado === '' || grupoFila === grupoSeleccionado;
@@ -395,8 +394,7 @@ $unidades = $stmt->fetchAll();
             var fechaActualizado = i.updated_at ? i.updated_at.substring(8,10) + '/' + i.updated_at.substring(5,7) : '-';
             
             html += '<tr data-id="' + i.id + '" data-grupo="' + i.grupo + '" class="' + rowClass + '">' +
-                '<td style="border-left: 3px solid ' + color + ';" class="text-nowrap py-1 px-1">' + (i.codigo || '') + '</td>' +
-                '<td class="py-1 px-1"><span class="badge" style="background-color:' + colorGrupo + '; color:' + (i.grupo === 'quesos' ? '#000' : '#fff') + ';">' + grupoShort + '</span></td>' +
+                '<td style="border-left: 4px solid ' + colorGrupo + ';" class="text-nowrap py-1 px-1">' + (i.codigo || '') + '</td>' +
                 '<td class="' + descClass + ' py-1 px-1">' + i.descripcion + '</td>' +
                 '<td class="text-muted small py-1 px-1">' + presentacion + '</td>' +
                 '<td class="py-1 px-1">' + unidadDisplay + '</td>' +
@@ -411,7 +409,7 @@ $unidades = $stmt->fetchAll();
         });
         
         if (html === '') {
-            html = '<tr><td colspan="11" class="text-center py-3 text-muted">No hay insumos registrados</td></tr>';
+            html = '<tr><td colspan="10" class="text-center py-3 text-muted">No hay insumos registrados</td></tr>';
         }
         
         tbody.innerHTML = html;
