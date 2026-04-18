@@ -18,7 +18,7 @@ $params = [];
 if ($estado) { $where .= " AND t.estado = ?"; $params[] = $estado; }
 if ($sede_id) { $where .= " AND t.sede_id = ?"; $params[] = $sede_id; }
 
-$sql = "SELECT t.*, s.nombre as sede_nombre, s.ciudad as sede_ciudad, u.nombre as comprador_nombre, u.apellido as comprador_apellido, d.nombre as distribuidor_nombre, d.apellido as distribuidor_apellido 
+$sql = "SELECT t.*, s.nombre as sede_nombre, s.ciudad as sede_ciudad, u.nombre as comprador_nombre, u.apellido as comprador_apellido, d.nombre as distribuidor_nombre, d.apellido as distribuidor_apellido, t.fecha_entrega 
     FROM tickets t 
     JOIN sedes s ON t.sede_id = s.id 
     LEFT JOIN usuarios u ON t.comprador_id = u.id
@@ -85,6 +85,7 @@ $todos_distribuidores = $pdo->query("SELECT id, nombre, apellido, ciudad FROM us
                         <th>Fecha</th>
                         <th>Estado</th>
                         <th>Acciones</th>
+                        <th>Entrega</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -112,6 +113,11 @@ $todos_distribuidores = $pdo->query("SELECT id, nombre, apellido, ciudad FROM us
                                 <option value="pendientes">Pendientes</option>
                                 <option value="finalizado">Finalizado</option>
                             </select>
+                        </td>
+                        <td>
+                            <?php if ($t['estado'] === 'finalizado' && $t['fecha_entrega']): ?>
+                            <small class="text-muted" style="font-size: 11px;"><?= date('d/m', strtotime($t['fecha_entrega'])) ?></small>
+                            <?php endif; ?>
                         </td>
                     </tr>
                     <?php endforeach; ?>

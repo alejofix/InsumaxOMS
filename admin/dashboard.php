@@ -43,7 +43,7 @@ $stmt = $pdo->query("SELECT
     SUM(CASE WHEN estado = 'recibido' THEN 1 ELSE 0 END) as recibido,
     SUM(CASE WHEN estado = 'proceso' THEN 1 ELSE 0 END) as proceso,
     SUM(CASE WHEN estado = 'pendientes' THEN 1 ELSE 0 END) as pendientes,
-    SUM(CASE WHEN estado = 'finalizado' THEN 1 ELSE 0 END) as finalized
+    SUM(CASE WHEN estado = 'finalizado' THEN 1 ELSE 0 END) as finalizados
 FROM tickets");
 $stats = $stmt->fetch();
 
@@ -115,7 +115,7 @@ $ultimos_tickets = $pdo->query($sql)->fetchAll();
                 <div class="card text-center" style="border-left: 4px solid <?= $colors['estados']['finalizado']['border'] ?? '#388e3c' ?>;">
                     <div class="card-body">
                         <div class="text-muted">Finalizados</div>
-                        <div style="font-size: 32px; font-weight: 700; color: <?= $colors['estados']['finalizado']['border'] ?? '#388e3c' ?>;"><?= (int)($stats['finalizado'] ?? 0) ?></div>
+                        <div style="font-size: 32px; font-weight: 700; color: <?= $colors['estados']['finalizado']['border'] ?? '#388e3c' ?>;"><?= (int)($stats['finalizados'] ?? 0) ?></div>
                     </div>
                 </div>
             </div>
