@@ -2,6 +2,7 @@
 session_start();
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/auth.php';
+require_once __DIR__ . '/../config/csrf.php';
 requireAuth();
 
 if ($_SESSION['rol'] !== 'comprador') {
@@ -9,25 +10,21 @@ if ($_SESSION['rol'] !== 'comprador') {
     exit;
 }
 
-$user_id = $_SESSION['user_id'];
-$sede_id = $_SESSION['sede_id'] ?? null;
+$colors = require __DIR__ . '/../config/colors.php';
 
-$stmt = $pdo->prepare("SELECT s.*, u.nombre as responsable, c.nombre as ciudad_nombre 
-    FROM sedes s 
-    LEFT JOIN usuarios u ON u.sede_id = s.id AND u.rol = 'comprador'
-    LEFT JOIN ciudades c ON s.ciudad_id = c.id 
-    WHERE s.id = ?");
+if (empty($_SESSION['sede_id'])) {
+    die('Error: Su cuenta no tiene sede asignada. Contacte al administrador.');
+}
+
+$sede_id = $_SESSION['sede_id'];
+
+$stmt = $pdo->prepare("SELECT s.*, c.nombre as ciudad_nombre FROM sedes s LEFT JOIN ciudades c ON s.ciudad_id = c.id WHERE s.id = ?");
 $stmt->execute([$sede_id]);
 $sede = $stmt->fetch();
 
-$stmt = $pdo->prepare("SELECT * FROM insumos WHERE activo = 1 ORDER BY FIELD(grupo, 'carnes', 'quesos', 'plaza', 'salsas', 'varios', 'aseo'), descripcion");
-$stmt->execute();
-$insumos = $stmt->fetchAll();
-
-$grupos = [];
-foreach ($insumos as $ins) {
-    $grupos[$ins['grupo']][] = $ins;
-}
+$ciudad_id = intval($sede['ciudad_id'] ?? 0);
+$ciudad_nombre = $sede['ciudad_nombre'] ?? '';
+$color_ciudad = $colors['ciudades'][$ciudad_nombre] ?? '#6c757d';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -40,31 +37,24 @@ foreach ($insumos as $ins) {
     <link rel="stylesheet" href="../css/style.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
-        .grupo-card { margin-bottom: 20px; }
-        .grupo-title { 
-            background: var(--insumax-primary, #e85d24); 
-            color: white; 
-            padding: 10px 15px; 
-            border-radius: 8px 8px 0 0;
-            font-weight: 600;
-        }
-        .insumo-row {
-            display: grid;
-            grid-template-columns: 1fr 80px 100px;
-            gap: 10px;
-            padding: 10px 15px;
-            border-bottom: 1px solid #eee;
-            align-items: center;
-        }
-        .insumo-row:last-child { border-bottom: none; }
-        .insumo-nombre { font-size: 14px; }
-        .insumo-unidad { font-size: 12px; color: #666; }
+        body { padding-bottom: 80px; }
+        .insumo-row td { vertical-align: middle; }
         .insumo-qty { width: 80px; }
-        .sede-info { 
-            background: #f8f9fa; 
-            padding: 15px; 
-            border-radius: 8px; 
-            margin-bottom: 20px;
+        .insumo-total { font-weight: 600; color: #28a745; }
+        .badge-grupo { font-size: 10px; }
+        .total-fijo {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: <?= $color_ciudad ?>;
+            color: white;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
         }
     </style>
 </head>
@@ -72,75 +62,205 @@ foreach ($insumos as $ins) {
     <?php include '../includes/header.php'; ?>
     
     <div class="container py-4">
-        <h4><i class="bi bi-plus-circle"></i> Nuevo Pedido</h4>
-        
-        <div class="sede-info">
-            <strong><i class="bi bi-shop"></i> <?= htmlspecialchars($sede['nombre'] ?? 'Sin sede') ?></strong>
-            <span class="text-muted"> | <?= htmlspecialchars($sede['ciudad_nombre'] ?? '') ?></span>
-            <div class="mt-2">
-                <label class="form-label small">Responsable del pedido</label>
-                <input type="text" class="form-control" name="responsable" required 
-                       value="<?= htmlspecialchars($_SESSION['nombre'] ?? '') ?>">
-            </div>
-            <div class="mt-2">
-                <label class="form-label small">Fecha de pedido</label>
-                <input type="date" class="form-control" name="fecha_pedido" required 
-                       value="<?= date('Y-m-d') ?>">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-3">
+                <h4><i class="bi bi-cart-plus"></i> Nuevo Pedido</h4>
+                <div class="badge bg-light text-dark" style="border-left: 3px solid <?= $color_ciudad ?>; padding: 8px 12px;">
+                    <i class="bi bi-shop"></i> <?= htmlspecialchars($sede['nombre'] ?? 'Sin sede') ?>
+                    <span class="text-muted">|</span>
+                    <strong style="color: <?= $color_ciudad ?>;"><?= htmlspecialchars($ciudad_nombre) ?></strong>
+                </div>
             </div>
         </div>
 
-        <form id="form-pedido" method="POST">
-            <?php foreach ($grupos as $grupo => $items): ?>
-            <div class="card grupo-card">
-                <div class="grupo-title">
-                    <i class="bi bi-tag"></i> <?= ucfirst($grupo) ?>
-                </div>
-                <div class="card-body p-0">
-                    <?php foreach ($items as $ins): ?>
-                    <div class="insumo-row">
-                        <div>
-                            <div class="insumo-nombre"><?= htmlspecialchars($ins['descripcion']) ?></div>
-                            <div class="insumo-unidad"><?= htmlspecialchars($ins['unidad_medida']) ?></div>
-                        </div>
-                        <input type="number" class="form-control form-control-sm insumo-qty" 
-                               name="items[<?= $ins['id'] ?>][cantidad]" 
-                               min="0" step="0.01" placeholder="0">
-                        <input type="hidden" name="items[<?= $ins['id'] ?>][insumo_id]" value="<?= $ins['id'] ?>">
-                        <input type="hidden" name="items[<?= $ins['id'] ?>][precio]" value="<?= $ins['precio_venta'] ?>">
-                    </div>
-                    <?php endforeach; ?>
+        <div class="row mb-3">
+            <div class="col-md-5">
+                <label class="form-label small"><i class="bi bi-person"></i> Responsable</label>
+                <input type="text" class="form-control" id="responsable" readonly value="<?= htmlspecialchars(trim(($_SESSION['nombre'] ?? '') . ' ' . ($_SESSION['apellido'] ?? ''))) ?>">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small"><i class="bi bi-calendar"></i> Fecha</label>
+                <input type="date" class="form-control" id="fecha_pedido" value="<?= date('Y-m-d') ?>" readonly disabled>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small">Buscar insumo</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                    <input type="text" id="buscar-insumo" class="form-control" placeholder="Buscar...">
                 </div>
             </div>
-            <?php endforeach; ?>
+        </div>
 
-            <div class="mb-3">
-                <label class="form-label">Observaciones</label>
-                <textarea class="form-control" name="observaciones" rows="3" 
-                          placeholder="Observaciones adicionales..."></textarea>
-            </div>
+        <div class="alert alert-info py-2 mb-3" style="border-left: 4px solid <?= $color_ciudad ?>;">
+            <i class="bi bi-geo-alt-fill" style="color: <?= $color_ciudad ?>;"></i> 
+            Lista para <strong style="color: <?= $color_ciudad ?>;">Bogotá</strong>
+        </div>
 
-            <button type="submit" class="btn btn-insumax">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover fs-6" id="tabla-insumos">
+                <thead class="table-light">
+                    <tr>
+                        <th>Cód</th>
+                        <th>Descripción</th>
+                        <th>Pres</th>
+                        <th>UND</th>
+                        <th>Fac</th>
+                        <th>$ Venta</th>
+                        <th>Cant</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody id="insumos-body">
+                    <tr><td colspan="8" class="text-center py-4"><i class="bi bi-hourglass-split"></i> Cargando insumos...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mb-3 mt-3">
+            <label class="form-label">Observaciones</label>
+            <textarea class="form-control" id="observaciones" rows="2" placeholder="Observaciones adicionales..."></textarea>
+        </div>
+    </div>
+
+    <div class="total-fijo" id="total-fijo">
+        <div>
+            <span class="opacity-75">Total:</span>
+            <span id="total-pedido" style="font-size: 20px; font-weight: 700;">$0</span>
+            <span id="items-contador" class="badge bg-light text-dark ms-2">0 items</span>
+        </div>
+        <div>
+            <button type="button" class="btn btn-insumax" onclick="enviarPedido()">
                 <i class="bi bi-check2-circle"></i> Enviar Pedido
             </button>
-            <a href="mis-pedidos" class="btn btn-outline-secondary">Cancelar</a>
-        </form>
+        </div>
     </div>
 
     <script>
-    document.getElementById('form-pedido').addEventListener('submit', async function(e) {
-        e.preventDefault();
+    var basePath = '..';
+    var ciudadActual = <?= $ciudad_id ?>;
+    var colorCiudad = '<?= $color_ciudad ?>';
+    var csrfToken = '<?php echo csrfToken(); ?>';
+    var coloresGrupo = <?= json_encode($colors['grupos']) ?>;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        cargarInsumos();
         
-        const formData = new FormData(this);
-        const data = Object.fromEntries(formData);
-        
-        // Recolectar items con cantidad > 0
-        const items = [];
-        formData.forEach((value, key) => {
-            if (key.startsWith('items[') && value > 0) {
-                const match = key.match(/items\[(\d+)\]\[cantidad\]/);
-                if (match) {
-                    items.push({ insumo_id: match[1], cantidad: value });
+        document.getElementById('buscar-insumo').addEventListener('input', filtrarTabla);
+    });
+
+    function cargarInsumos() {
+        var url = basePath + '/api/insumos.php?action=list&ciudad_id=' + ciudadActual;
+        fetch(url)
+            .then(function(resp) { return resp.json(); })
+            .then(function(res) {
+                if (!res.success) {
+                    document.getElementById('insumos-body').innerHTML = '<tr><td colspan="8" class="text-center text-danger">Error: ' + (res.error || 'desconocido') + '</td></tr>';
+                    return;
                 }
+                renderTable(res.data);
+            })
+            .catch(function(err) {
+                document.getElementById('insumos-body').innerHTML = '<tr><td colspan="8" class="text-center text-danger">Error de conexión</td></tr>';
+            });
+    }
+
+    function renderTable(data) {
+        var tbody = document.getElementById('insumos-body');
+        var html = '';
+        
+        data.forEach(function(i) {
+            var fmt = function(n) {
+                return n ? parseFloat(n).toLocaleString('es-CO') : '-';
+            };
+            var factor = parseFloat(i.factor_conversion) || 1;
+            var factorDisplay = factor > 1 ? '<strong>' + fmt(factor) + 'g</strong>' : '<span class="text-muted">-</span>';
+            var precioKg = i.precio_kg ? '<span class="badge bg-info">$' + fmt(i.precio_kg) + '</span>' : '<span class="text-muted">-</span>';
+            var unidadDisplay = '<span class="badge bg-primary">' + (i.unidad_compra || i.unidad_medida || '-') + '</span>';
+            var colorGrupo = coloresGrupo[i.grupo] || '#6c757d';
+            var presentacion = i.presentacion || '-';
+            var activo = i.activo !== 0;
+            var rowClass = activo ? '' : 'table-secondary opacity-75';
+            var descClass = activo ? '' : 'text-muted text-decoration-line-through';
+            
+            var precioVenta = parseFloat(i.precio_venta) || 0;
+            
+            html += '<tr class="insumo-row ' + rowClass + '" data-id="' + i.id + '" data-precio="' + precioVenta + '" data-grupo="' + i.grupo + '">' +
+                '<td style="border-left: 4px solid ' + colorGrupo + ';">' + (i.codigo || '') + '</td>' +
+                '<td class="' + descClass + '">' + i.descripcion + '</td>' +
+                '<td class="text-muted small">' + presentacion + '</td>' +
+                '<td>' + unidadDisplay + '</td>' +
+                '<td>' + factorDisplay + '</td>' +
+                '<td class="fw-bold">' + (i.precio_venta ? '$' + fmt(i.precio_venta) : '-') + '</td>' +
+                '<td>' +
+                '<input type="number" class="form-control form-control-sm insumo-qty" ' +
+                'min="0" step="0.01" placeholder="0" ' +
+                'oninput="calcularItem(this)" ' +
+                'data-id="' + i.id + '">' +
+                '</td>' +
+                '<td class="insumo-total">$0</td>' +
+                '</tr>';
+        });
+        
+        if (html === '') {
+            html = '<tr><td colspan="8" class="text-center text-muted">No hay insumos disponibles</td></tr>';
+        }
+        
+        tbody.innerHTML = html;
+    }
+
+    function filtrarTabla() {
+        var texto = document.getElementById('buscar-insumo').value.toLowerCase();
+        var filas = document.querySelectorAll('#insumos-body .insumo-row');
+        
+        filas.forEach(function(fila) {
+            var desc = fila.querySelector('td:nth-child(2)').textContent.toLowerCase();
+            var cod = fila.querySelector('td:first-child').textContent.toLowerCase();
+            var mostrar = texto === '' || desc.includes(texto) || cod.includes(texto);
+            fila.style.display = mostrar ? '' : 'none';
+        });
+    }
+
+    function calcularItem(input) {
+        var row = input.closest('tr');
+        var cantidad = parseFloat(input.value) || 0;
+        var precio = parseFloat(row.dataset.precio) || 0;
+        var total = cantidad * precio;
+        
+        var totalCell = row.querySelector('.insumo-total');
+        totalCell.textContent = total > 0 ? '$' + total.toLocaleString('es-CO', {maximumFractionDigits: 0}) : '$0';
+        
+        actualizarTotalGeneral();
+    }
+
+    function actualizarTotalGeneral() {
+        var total = 0;
+        var itemsCount = 0;
+        
+        document.querySelectorAll('#insumos-body .insumo-row').forEach(function(row) {
+            var input = row.querySelector('.insumo-qty');
+            var cantidad = parseFloat(input.value) || 0;
+            var precio = parseFloat(row.dataset.precio) || 0;
+            if (cantidad > 0) {
+                total += cantidad * precio;
+                itemsCount++;
+            }
+        });
+        
+        document.getElementById('total-pedido').textContent = '$' + total.toLocaleString('es-CO', {maximumFractionDigits: 0});
+        document.getElementById('items-contador').textContent = itemsCount + ' items';
+    }
+
+    function enviarPedido() {
+        var items = [];
+        
+        document.querySelectorAll('#insumos-body .insumo-row').forEach(function(row) {
+            var input = row.querySelector('.insumo-qty');
+            var cantidad = parseFloat(input.value) || 0;
+            if (cantidad > 0) {
+                items.push({
+                    insumo_id: row.dataset.id,
+                    cantidad: cantidad
+                });
             }
         });
         
@@ -149,30 +269,32 @@ foreach ($insumos as $ins) {
             return;
         }
 
-        const payload = {
-            responsable: formData.get('responsable'),
-            fecha_pedido: formData.get('fecha_pedido'),
-            observaciones: formData.get('observaciones'),
+        var payload = {
+            csrf_token: csrfToken,
+            responsable: document.getElementById('responsable').value,
+            fecha_pedido: document.getElementById('fecha_pedido').value,
+            observaciones: document.getElementById('observaciones').value,
             items: items
         };
 
-        try {
-            const resp = await fetch('../api/tickets.php?action=create', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const result = await resp.json();
+        fetch(basePath + '/api/tickets.php?action=create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(function(resp) { return resp.json(); })
+        .then(function(result) {
             if (result.success) {
                 alert('Pedido creado: ' + result.codigo_ticket);
                 window.location.href = 'mis-pedidos';
             } else {
-                alert(result.error || 'Error al crear pedido');
+                alert('Error: ' + (result.error || 'desconocido'));
             }
-        } catch (err) {
+        })
+        .catch(function(err) {
             alert('Error de conexión');
-        }
-    });
+        });
+    }
     </script>
 </body>
 </html>

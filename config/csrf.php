@@ -22,6 +22,10 @@ function verifyCsrf($token) {
 
 function requireCsrf() {
     $token = $_POST['csrf_token'] ?? $_GET['csrf_token'] ?? '';
+    if (empty($token)) {
+        $json = json_decode(file_get_contents('php://input'), true);
+        $token = $json['csrf_token'] ?? '';
+    }
     if (!verifyCsrf($token)) {
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'Token CSRF inválido']);
