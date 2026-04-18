@@ -2,6 +2,7 @@
 session_start();
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/auth.php';
+require_once __DIR__ . '/../config/csrf.php';
 $colors = require __DIR__ . '/../config/colors.php';
 requireAuth();
 
@@ -10,13 +11,40 @@ if ($_SESSION['rol'] !== 'admon') {
     exit;
 }
 
+$filtro_mes = $_GET['filtro_mes'] ?? 'este_mes';
+
+$filtro_mes = $_GET['filtro_mes'] ?? 'todo';
+
+switch($filtro_mes) {
+    case 'este_mes':
+        $fecha_inicio = date('Y-m-01');
+        $fecha_fin = date('Y-m-t');
+        break;
+    case 'mes_anterior':
+        $fecha_inicio = date('Y-m-01', strtotime('-1 month'));
+        $fecha_fin = date('Y-m-t', strtotime('-1 month'));
+        break;
+    case 'ultimos_30':
+        $fecha_inicio = date('Y-m-d', strtotime('-30 days'));
+        $fecha_fin = date('Y-m-d');
+        break;
+    case 'todo':
+        $fecha_inicio = '2000-01-01';
+        $fecha_fin = date('Y-m-d');
+        break;
+    default:
+        $fecha_inicio = date('Y-m-01');
+        $fecha_fin = date('Y-m-t');
+}
+
+# Contadores y Tickets por Sede - SIN FILTRO (totales siempre)
 $stmt = $pdo->query("SELECT 
     COUNT(*) as total,
     SUM(CASE WHEN estado = 'recibido' THEN 1 ELSE 0 END) as recibido,
     SUM(CASE WHEN estado = 'proceso' THEN 1 ELSE 0 END) as proceso,
     SUM(CASE WHEN estado = 'pendientes' THEN 1 ELSE 0 END) as pendientes,
-    SUM(CASE WHEN estado = 'finalizado' THEN 1 ELSE 0 END) as finalizado
-FROM tickets WHERE DATE(created_at) = CURDATE()");
+    SUM(CASE WHEN estado = 'finalizado' THEN 1 ELSE 0 END) as finalized
+FROM tickets");
 $stats = $stmt->fetch();
 
 $stmt = $pdo->query("SELECT 
@@ -28,6 +56,15 @@ GROUP BY s.id
 ORDER BY total DESC
 LIMIT 5");
 $sedes_stats = $stmt->fetchAll();
+
+# Ultimos Tickets - CON FILTRO
+$sql = "SELECT t.*, s.nombre as sede_nombre, s.ciudad as sede_ciudad
+    FROM tickets t 
+    JOIN sedes s ON t.sede_id = s.id 
+    WHERE t.fecha_pedido >= '$fecha_inicio' AND t.fecha_pedido <= '$fecha_fin'
+    ORDER BY t.created_at DESC 
+    LIMIT 20";
+$ultimos_tickets = $pdo->query($sql)->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -44,38 +81,41 @@ $sedes_stats = $stmt->fetchAll();
     <?php include '../includes/header.php'; ?>
     
     <div class="container py-4">
-        <h4><i class="bi bi-speedometer2"></i> Dashboard - Administrador</h4>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4><i class="bi bi-speedometer2"></i> Dashboard - Administrador</h4>
+            
+        </div>
         
         <div class="row mb-4">
             <div class="col-md-3">
-                <div class="card text-center" style="border-left: 4px solid <?= $colors['estados']['recibido']['border'] ?>;">
+                <div class="card text-center" style="border-left: 4px solid <?= $colors['estados']['recibido']['border'] ?? '#1565c0' ?>;">
                     <div class="card-body">
                         <div class="text-muted">Recibidos</div>
-                        <div style="font-size: 32px; font-weight: 700; color: <?= $colors['estados']['recibido']['border'] ?>;"><?= $stats['recibido'] ?? 0 ?></div>
+                        <div style="font-size: 32px; font-weight: 700; color: <?= $colors['estados']['recibido']['border'] ?? '#1565c0' ?>;"><?= (int)($stats['recibido'] ?? 0) ?></div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card text-center" style="border-left: 4px solid <?= $colors['estados']['proceso']['border'] ?>;">
+                <div class="card text-center" style="border-left: 4px solid <?= $colors['estados']['proceso']['border'] ?? '#f57f17' ?>;">
                     <div class="card-body">
                         <div class="text-muted">En Proceso</div>
-                        <div style="font-size: 32px; font-weight: 700; color: <?= $colors['estados']['proceso']['border'] ?>;"><?= $stats['proceso'] ?? 0 ?></div>
+                        <div style="font-size: 32px; font-weight: 700; color: <?= $colors['estados']['proceso']['border'] ?? '#f57f17' ?>;"><?= (int)($stats['proceso'] ?? 0) ?></div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card text-center" style="border-left: 4px solid <?= $colors['estados']['pendientes']['border'] ?>;">
+                <div class="card text-center" style="border-left: 4px solid <?= $colors['estados']['pendientes']['border'] ?? '#d32f2f' ?>;">
                     <div class="card-body">
                         <div class="text-muted">Con Pendientes</div>
-                        <div style="font-size: 32px; font-weight: 700; color: <?= $colors['estados']['pendientes']['border'] ?>;"><?= $stats['pendientes'] ?? 0 ?></div>
+                        <div style="font-size: 32px; font-weight: 700; color: <?= $colors['estados']['pendientes']['border'] ?? '#d32f2f' ?>;"><?= (int)($stats['pendientes'] ?? 0) ?></div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card text-center" style="border-left: 4px solid <?= $colors['estados']['finalizado']['border'] ?>;">
+                <div class="card text-center" style="border-left: 4px solid <?= $colors['estados']['finalizado']['border'] ?? '#388e3c' ?>;">
                     <div class="card-body">
                         <div class="text-muted">Finalizados</div>
-                        <div style="font-size: 32px; font-weight: 700; color: <?= $colors['estados']['finalizado']['border'] ?>;"><?= $stats['finalizado'] ?? 0 ?></div>
+                        <div style="font-size: 32px; font-weight: 700; color: <?= $colors['estados']['finalizado']['border'] ?? '#388e3c' ?>;"><?= (int)($stats['finalizado'] ?? 0) ?></div>
                     </div>
                 </div>
             </div>
@@ -84,8 +124,14 @@ $sedes_stats = $stmt->fetchAll();
         <div class="row">
             <div class="col-md-8">
                 <div class="card">
-                    <div class="card-header">
+                    <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="bi bi-ticket-detailed"></i> Últimos Tickets</h5>
+                        <select class="form-select form-select-sm" style="width:auto" onchange="window.location.href='dashboard.php?filtro_mes='+this.value">
+                            <option value="este_mes" <?= $filtro_mes=='este_mes'?'selected':''?>>Este mes</option>
+                            <option value="mes_anterior" <?= $filtro_mes=='mes_anterior'?'selected':''?>>Mes anterior</option>
+                            <option value="ultimos_30" <?= $filtro_mes=='ultimos_30'?'selected':''?>>Últimos 30 días</option>
+                            <option value="todos" <?= $filtro_mes=='todos'?'selected':''?>>Todos</option>
+                        </select>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
@@ -94,12 +140,27 @@ $sedes_stats = $stmt->fetchAll();
                                     <tr>
                                         <th>Código</th>
                                         <th>Sede</th>
+                                        <th>Ciudad</th>
                                         <th>Estado</th>
                                         <th>Fecha</th>
-                                        <th>Acciones</th>
                                     </tr>
                                 </thead>
-                                <tbody></tbody>
+                                <tbody>
+                                <?php if(count($ultimos_tickets) > 0): ?>
+                                <?php foreach($ultimos_tickets as $t): ?>
+                                <?php $color_ciudad = $colors['ciudades'][$t['sede_ciudad'] ?? ''] ?? '#6c757d'; ?>
+                                <tr style="border-left: 3px solid <?= $color_ciudad ?>;">
+                                    <td><strong><?= htmlspecialchars($t['codigo_ticket']) ?></strong></td>
+                                    <td><?= htmlspecialchars($t['sede_nombre']) ?></td>
+                                    <td style="color: <?= $color_ciudad ?>; font-weight: 600;"><?= htmlspecialchars($t['sede_ciudad'] ?? '') ?></td>
+                                    <td><span class="badge" style="background-color: <?= $colors['estados'][$t['estado']]['bg'] ?? '#eee' ?>; color: <?= $colors['estados'][$t['estado']]['text'] ?? '#333' ?>; border: 1px solid <?= $colors['estados'][$t['estado']]['text'] ?? '#666' ?>; font-weight: 600;"><?= strtoupper($t['estado']) ?></span></td>
+                                    <td><?= $t['fecha_pedido'] ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                                <?php else: ?>
+                                <tr><td colspan="5" class="text-center text-muted">No hay tickets para el periodo: <?= $filtro_mes ?> (<?= $fecha_inicio ?> a <?= $fecha_fin ?>)</td></tr>
+                                <?php endif; ?>
+                                </tbody>
                             </table>
                         </div>
                     </div>
@@ -124,12 +185,20 @@ $sedes_stats = $stmt->fetchAll();
     </div>
 
     <script>
+    const filtroMes = '<?= $filtro_mes ?>';
+    const fechaDesde = '<?= $fecha_inicio ?>';
+    
     async function cargarTickets() {
+        console.log('Cargando tickets desde:', fechaDesde);
         try {
-            const resp = await fetch('../api/tickets.php?action=list');
+            const resp = await fetch('../api/tickets.php?action=list&fecha_desde=' + encodeURIComponent(fechaDesde));
             const result = await resp.json();
+            console.log('API response:', result);
             
-            if (!result.success) return;
+            if (!result.success) {
+                console.error('Error:', result.error);
+                return;
+            }
             
             const tbody = document.querySelector('#tabla-tickets tbody');
             const estados = <?= json_encode($colors['estados']) ?>;
@@ -140,11 +209,6 @@ $sedes_stats = $stmt->fetchAll();
                     <td>${t.sede_nombre || '-'}</td>
                     <td><span class="badge" style="background-color: ${estados[t.estado]?.bg || '#6c757d'}; color: ${estados[t.estado]?.text || '#fff'};">${t.estado.toUpperCase()}</span></td>
                     <td>${t.fecha_pedido}</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary" onclick="verTicket(${t.id})">
-                            <i class="bi bi-eye"></i>
-                        </button>
-                    </td>
                 </tr>
             `).join('');
         } catch (err) {
@@ -246,7 +310,7 @@ $sedes_stats = $stmt->fetchAll();
         cargarTickets();
     }
 
-    cargarTickets();
+    // cargarTickets(); // deshabilitado - tabla se llena desde PHP
     </script>
 
     <div class="modal fade" id="detailModal" tabindex="-1">

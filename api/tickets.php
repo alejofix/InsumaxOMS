@@ -134,7 +134,7 @@ if ($action === 'list') {
         } else {
             $stmt = $pdo->prepare("SELECT t.*, s.nombre as sede_nombre, s.ciudad, 
                 u.nombre as comprador_nombre, u.apellido as comprador_apellido,
-                d.nombre as distribuidor_nombre
+                d.nombre as distribuidor_nombre, d.apellido as distribuidor_apellido
                 FROM tickets t 
                 JOIN sedes s ON t.sede_id = s.id
                 JOIN usuarios u ON t.comprador_id = u.id

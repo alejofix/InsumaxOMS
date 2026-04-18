@@ -79,6 +79,7 @@ $todos_distribuidores = $pdo->query("SELECT id, nombre, apellido, ciudad FROM us
                     <tr>
                         <th>Código</th>
                         <th>Sede</th>
+                        <th>Ciudad</th>
                         <th>Comprador</th>
                         <th>Distribuidor</th>
                         <th>Fecha</th>
@@ -88,13 +89,15 @@ $todos_distribuidores = $pdo->query("SELECT id, nombre, apellido, ciudad FROM us
                 </thead>
                 <tbody>
                     <?php foreach($tickets as $t): ?>
-                    <tr>
+                    <?php $color_ciudad = $colors['ciudades'][$t['sede_ciudad'] ?? ''] ?? '#6c757d'; ?>
+                    <tr style="border-left: 3px solid <?= $color_ciudad ?>;">
                         <td><?= $t['codigo_ticket'] ?></td>
                         <td><?= htmlspecialchars($t['sede_nombre']) ?></td>
+                        <td style="color: <?= $color_ciudad ?>; font-weight: 600;"><?= htmlspecialchars($t['sede_ciudad'] ?? '') ?></td>
                         <td><?= htmlspecialchars(($t['comprador_nombre'] ?? '') . ' ' . ($t['comprador_apellido'] ?? '')) ?></td>
                         <td><?= htmlspecialchars(($t['distribuidor_nombre'] ?? '') . ' ' . ($t['distribuidor_apellido'] ?? '')) ?></td>
                         <td><?= $t['fecha_pedido'] ?></td>
-                        <td><span class="badge" style="background-color: <?= $colors['estados'][$t['estado']]['bg'] ?? '#6c757d' ?>; color: <?= $colors['estados'][$t['estado']]['text'] ?? '#fff' ?>;"><?= strtoupper($t['estado']) ?></span></td>
+                        <td><span class="badge" style="background-color: <?= $colors['estados'][$t['estado']]['bg'] ?? '#eee' ?>; color: <?= $colors['estados'][$t['estado']]['text'] ?? '#333' ?>; border: 1px solid <?= $colors['estados'][$t['estado']]['text'] ?? '#666' ?>; font-weight: 600;"><?= strtoupper($t['estado']) ?></span></td>
                         <td data-ticket-id="<?= $t['id'] ?>" data-ciudad="<?= htmlspecialchars($t['sede_ciudad']) ?>">
                             <button class="btn btn-sm btn-outline-primary" onclick="verDetalle(<?= $t['id'] ?>)"><i class="bi bi-eye"></i></button>
                             <?php if (empty($t['distribuidor_id'])): ?>

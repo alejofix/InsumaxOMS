@@ -54,6 +54,9 @@ foreach ($colors['estados'] as $estado => $config) {
     </div>
 
     <script>
+    const ciudadesColors = <?= json_encode($colors['ciudades']) ?>;
+    const estadosColors = <?= json_encode($colors['estados']) ?>;
+    
     async function cargarPedidos() {
         try {
             const resp = await fetch('../api/tickets.php?action=list');
@@ -65,19 +68,22 @@ foreach ($colors['estados'] as $estado => $config) {
             }
             
             const tbody = document.querySelector('#tabla-pedidos tbody');
-            tbody.innerHTML = result.data.map(ticket => `
-                <tr>
+            tbody.innerHTML = result.data.map(ticket => {
+                const colorCiudad = ciudadesColors[ticket.ciudad] || '#6c757d';
+                const colorEstado = estadosColors[ticket.estado] || {bg: '#eee', text: '#333'};
+                return `
+                <tr style="border-left: 3px solid ${colorCiudad};">
                     <td><strong>${ticket.codigo_ticket}</strong></td>
                     <td>${ticket.fecha_pedido}</td>
                     <td>${ticket.responsable || '-'}</td>
-                    <td><span class="estado-badge estado-${ticket.estado}">${ticket.estado.toUpperCase()}</span></td>
+                    <td><span class="badge" style="background-color: ${colorEstado.bg}; color: ${colorEstado.text}; border: 1px solid ${colorEstado.text}; font-weight: 600;">${ticket.estado.toUpperCase()}</span></td>
                     <td>
                         <button class="btn btn-sm btn-outline-primary" onclick="verDetalle(${ticket.id})">
                             <i class="bi bi-eye"></i> Ver
                         </button>
                     </td>
                 </tr>
-            `).join('');
+            `}).join('');
         } catch (err) {
             console.error(err);
         }

@@ -2,6 +2,7 @@
 session_start();
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/auth.php';
+$colors = require __DIR__ . '/../config/colors.php';
 requireAuth();
 
 if ($_SESSION['rol'] !== 'dist') {
@@ -35,6 +36,9 @@ $user_id = $_SESSION['user_id'];
     </div>
 
     <script>
+    const coloresCiudades = <?= json_encode($colors['ciudades']) ?>;
+    const coloresEstados = <?= json_encode($colors['estados']) ?>;
+    
     async function cargarTickets() {
         const resp = await fetch('../api/tickets.php?action=list');
         const r = await resp.json();
@@ -51,18 +55,21 @@ $user_id = $_SESSION['user_id'];
             return;
         }
         
-        document.getElementById('lista-tickets').innerHTML = tickets.map(t => `
-            <div class="card ticket-card mb-3">
+        document.getElementById('lista-tickets').innerHTML = tickets.map(t => {
+            const colorCiudad = coloresCiudades[t.ciudad] || '#6c757d';
+            const colorEstado = coloresEstados[t.estado] || {bg: '#eee', text: '#333'};
+            return `
+            <div class="card ticket-card mb-3" style="border-left: 4px solid ${colorCiudad};">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
                             <h5>${t.codigo_ticket}</h5>
-                            <p class="mb-1"><i class="bi bi-shop"></i> ${t.sede_nombre || '-'} - ${t.ciudad || ''}</p>
+                            <p class="mb-1"><i class="bi bi-shop"></i> ${t.sede_nombre || '-'} - <strong style="color:${colorCiudad}">${t.ciudad || ''}</strong></p>
                             <p class="mb-1"><i class="bi bi-calendar"></i> ${t.fecha_pedido}</p>
                             <p class="mb-0"><i class="bi bi-person"></i> ${t.responsable || '-'}</p>
                         </div>
                         <div>
-                            <span class="badge bg-${t.estado === 'finalizado' ? 'success' : t.estado === 'pendientes' ? 'danger' : t.estado === 'proceso' ? 'warning' : 'primary'}">
+                            <span class="badge" style="background-color: ${colorEstado.bg}; color: ${colorEstado.text}; border: 1px solid ${colorEstado.text}; font-weight: 600;">
                                 ${t.estado.toUpperCase()}
                             </span>
                         </div>
@@ -72,7 +79,7 @@ $user_id = $_SESSION['user_id'];
                     </button>
                 </div>
             </div>
-        `).join('');
+        `}).join('');
     }
 
     async function abrirChecklist(ticketId) {
