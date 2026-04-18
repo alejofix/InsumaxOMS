@@ -75,7 +75,7 @@ $color_ciudad = $colors['ciudades'][$ciudad_nombre] ?? '#6c757d';
 
         <div class="row mb-3">
             <div class="col-md-5">
-                <label class="form-label small"><i class="bi bi-person"></i> Responsable</label>
+                <label class="form-label small"><i class="bi bi-person"></i> Usuario</label>
                 <input type="text" class="form-control" id="responsable" readonly value="<?= htmlspecialchars(trim(($_SESSION['nombre'] ?? '') . ' ' . ($_SESSION['apellido'] ?? ''))) ?>">
             </div>
             <div class="col-md-3">
@@ -129,9 +129,73 @@ $color_ciudad = $colors['ciudades'][$ciudad_nombre] ?? '#6c757d';
             <span id="items-contador" class="badge bg-light text-dark ms-2">0 items</span>
         </div>
         <div>
-            <button type="button" class="btn btn-insumax" onclick="enviarPedido()">
+            <button type="button" class="btn btn-insumax" onclick="mostrarResumen()">
                 <i class="bi bi-check2-circle"></i> Enviar Pedido
             </button>
+        </div>
+    </div>
+
+    <div class="modal fade" id="resumenModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header" style="background: <?= $color_ciudad ?>; color: white;">
+                    <h5 class="modal-title"><i class="bi bi-cart-check"></i> Resumen del Pedido</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-bold">Usuario</label>
+                            <input type="text" class="form-control" id="resumen-responsable" readonly>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold">Fecha</label>
+                            <input type="text" class="form-control" id="resumen-fecha" readonly>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Sede</label>
+                        <input type="text" class="form-control" id="resumen-sede" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Observaciones</label>
+                        <textarea class="form-control" id="resumen-observaciones" rows="2" placeholder="Sin observaciones"></textarea>
+                    </div>
+                    <hr>
+                    <h6 class="fw-bold mb-2">Ítems del Pedido</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>Cantidad</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resumen-items-body">
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-light fw-bold">
+                                    <td colspan="2">Total Items</td>
+                                    <td id="resumen-total-items">0</td>
+                                </tr>
+                                <tr class="fw-bold">
+                                    <td colspan="2">Total Valor</td>
+                                    <td id="resumen-total-valor">$0</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-insumax" onclick="confirmarPedido()">
+                        <i class="bi bi-check2-circle"></i> Confirmar Pedido
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -173,7 +237,7 @@ $color_ciudad = $colors['ciudades'][$ciudad_nombre] ?? '#6c757d';
                 return n ? parseFloat(n).toLocaleString('es-CO') : '-';
             };
             var factor = parseFloat(i.factor_conversion) || 1;
-            var factorDisplay = factor > 1 ? '<strong>' + fmt(factor) + 'g</strong>' : '<span class="text-muted">-</span>';
+            var factorDisplay = factor > 1 ? fmt(factor) + 'g' : '<span class="text-muted">-</span>';
             var precioKg = i.precio_kg ? '<span class="badge bg-info">$' + fmt(i.precio_kg) + '</span>' : '<span class="text-muted">-</span>';
             var unidadDisplay = '<span class="badge bg-primary">' + (i.unidad_compra || i.unidad_medida || '-') + '</span>';
             var colorGrupo = coloresGrupo[i.grupo] || '#6c757d';
@@ -189,7 +253,7 @@ $color_ciudad = $colors['ciudades'][$ciudad_nombre] ?? '#6c757d';
                 '<td class="' + descClass + '">' + i.descripcion + '</td>' +
                 '<td class="text-muted small">' + presentacion + '</td>' +
                 '<td>' + unidadDisplay + '</td>' +
-                '<td>' + factorDisplay + '</td>' +
+                '<td class="text-muted small">' + factorDisplay + '</td>' +
                 '<td class="fw-bold">' + (i.precio_venta ? '$' + fmt(i.precio_venta) : '-') + '</td>' +
                 '<td>' +
                 '<input type="number" class="form-control form-control-sm insumo-qty" ' +
@@ -250,24 +314,68 @@ $color_ciudad = $colors['ciudades'][$ciudad_nombre] ?? '#6c757d';
         document.getElementById('items-contador').textContent = itemsCount + ' items';
     }
 
-    function enviarPedido() {
-        var items = [];
+    var itemsData = [];
+
+    function mostrarResumen() {
+        itemsData = [];
         
         document.querySelectorAll('#insumos-body .insumo-row').forEach(function(row) {
             var input = row.querySelector('.insumo-qty');
             var cantidad = parseFloat(input.value) || 0;
+            var precio = parseFloat(row.dataset.precio) || 0;
             if (cantidad > 0) {
-                items.push({
+                var descripcion = row.querySelector('td:nth-child(2)').textContent;
+                itemsData.push({
                     insumo_id: row.dataset.id,
-                    cantidad: cantidad
+                    descripcion: descripcion,
+                    cantidad: cantidad,
+                    precio: precio,
+                    total: cantidad * precio
                 });
             }
         });
         
-        if (items.length === 0) {
+        if (itemsData.length === 0) {
             alert('Debe seleccionar al menos un producto');
             return;
         }
+
+        document.getElementById('resumen-responsable').value = document.getElementById('responsable').value;
+        document.getElementById('resumen-fecha').value = document.getElementById('fecha_pedido').value;
+        var sedeBadge = document.querySelector('.badge.bg-light');
+        var sedeNombre = sedeBadge ? sedeBadge.textContent.replace('|', '-').trim() : '<?= htmlspecialchars($sede['nombre'] ?? 'Sin sede') ?> - <?= htmlspecialchars($ciudad_nombre) ?>';
+        document.getElementById('resumen-sede').value = sedeNombre;
+        document.getElementById('resumen-observaciones').value = document.getElementById('observaciones').value;
+
+        var tbody = document.getElementById('resumen-items-body');
+        var html = '';
+        var totalItems = 0;
+        var totalValor = 0;
+        
+        itemsData.forEach(function(item) {
+            html += '<tr>' +
+                '<td>' + item.descripcion + '</td>' +
+                '<td>' + item.cantidad + '</td>' +
+                '<td>$' + item.total.toLocaleString('es-CO') + '</td>' +
+                '</tr>';
+            totalItems += item.cantidad;
+            totalValor += item.total;
+        });
+        
+        tbody.innerHTML = html;
+        document.getElementById('resumen-total-items').textContent = totalItems;
+        document.getElementById('resumen-total-valor').textContent = '$' + totalValor.toLocaleString('es-CO');
+
+        new bootstrap.Modal(document.getElementById('resumenModal')).show();
+    }
+
+    function confirmarPedido() {
+        var items = itemsData.map(function(item) {
+            return {
+                insumo_id: parseInt(item.insumo_id, 10),
+                cantidad: parseFloat(item.cantidad)
+            };
+        });
 
         var payload = {
             csrf_token: csrfToken,
@@ -277,22 +385,36 @@ $color_ciudad = $colors['ciudades'][$ciudad_nombre] ?? '#6c757d';
             items: items
         };
 
+        
+
         fetch(basePath + '/api/tickets.php?action=create', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         })
-        .then(function(resp) { return resp.json(); })
-        .then(function(result) {
+        .then(function(resp) {
+            console.log('Status:', resp.status);
+            if (!resp.ok) {
+                throw new Error('HTTP ' + resp.status);
+            }
+            return resp.text();
+        })
+        .then(function(text) {
+            console.log('Response:', text);
+            if (!text) {
+                throw new Error('Respuesta vacía');
+            }
+            var result = JSON.parse(text);
             if (result.success) {
+                bootstrap.Modal.getInstance(document.getElementById('resumenModal')).hide();
                 alert('Pedido creado: ' + result.codigo_ticket);
-                window.location.href = 'mis-pedidos';
+                window.location.href = 'mis-pedidos.php';
             } else {
                 alert('Error: ' + (result.error || 'desconocido'));
             }
         })
         .catch(function(err) {
-            alert('Error de conexión');
+            alert('Error: ' + err.message);
         });
     }
     </script>

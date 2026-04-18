@@ -1,20 +1,28 @@
 <?php
 session_start();
-require_once __DIR__ . '/config/db.php';
-require_once __DIR__ . '/config/auth.php';
-require_once __DIR__ . '/config/csrf.php';
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/auth.php';
+require_once __DIR__ . '/../config/csrf.php';
 
 header('Content-Type: application/json');
 
 $action = $_GET['action'] ?? '';
 
 if ($action === 'create') {
-    requireCsrf();
-    
-    $input = json_decode(file_get_contents('php://input'), true);
+    $inputRaw = file_get_contents('php://input');
+    $input = json_decode($inputRaw, true);
     
     if (!$input) {
         echo json_encode(['success' => false, 'error' => 'Datos inválidos']);
+        exit;
+    }
+    
+    $token = $input['csrf_token'] ?? '';
+    $sessionToken = $_SESSION['csrf_token'] ?? '';
+    
+    if (empty($token) || $token !== $sessionToken) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Token CSRF inválido']);
         exit;
     }
     
@@ -41,14 +49,24 @@ if ($action === 'create') {
         exit;
     }
     
-    // Generar código ticket: INS-YYYYMMDD-XXX
+    // Generar código ticket: INS-{sede}-{YYYYMMDD}-{secuencial}
     $dateStr = date('Ymd');
-    $stmt = $pdo->prepare("SELECT MAX(CAST(SUBSTRING(codigo_ticket, 13, 3) AS UNSIGNED)) as max_num 
-        FROM tickets WHERE fecha_pedido = CURDATE()");
-    $stmt->execute();
-    $result = $stmt->fetch();
-    $seq = ($result['max_num'] ?? 0) + 1;
-    $codigo_ticket = 'INS-' . $dateStr . '-' . str_pad($seq, 3, '0', STR_PAD_LEFT);
+    $sedeIdStr = str_pad($sede_id, 3, '0', STR_PAD_LEFT);
+    $likePattern = 'INS-' . $sedeIdStr . '-' . $dateStr . '-%';
+    $stmt = $pdo->prepare("SELECT codigo_ticket FROM tickets WHERE sede_id = ? AND fecha_pedido = CURDATE() AND codigo_ticket LIKE ?");
+    $stmt->execute([$sede_id, $likePattern]);
+    $results = $stmt->fetchAll();
+    $seq = 1;
+    if ($results) {
+        $maxSeq = 0;
+        foreach ($results as $row) {
+            $parts = explode('-', $row['codigo_ticket']);
+            $s = (int)end($parts);
+            if ($s > $maxSeq) $maxSeq = $s;
+        }
+        $seq = $maxSeq + 1;
+    }
+    $codigo_ticket = 'INS-' . $sedeIdStr . '-' . $dateStr . '-' . str_pad($seq, 3, '0', STR_PAD_LEFT);
     
     try {
         $pdo->beginTransaction();
@@ -67,7 +85,6 @@ if ($action === 'create') {
         if ($ciudad_id) {
             $stmt_precio = $pdo->prepare("SELECT precio_venta FROM insumos_precios WHERE insumo_id = ? AND ciudad_id = ?");
         }
-        $stmt_insumo = $pdo->prepare("SELECT precio_venta FROM insumos WHERE id = ?");
         $stmt_ins = $pdo->prepare("INSERT INTO ticket_items (ticket_id, insumo_id, cantidad_pedida, precio_unitario, estado_item) 
             VALUES (?, ?, ?, ?, 'pendiente')");
         
@@ -79,11 +96,6 @@ if ($action === 'create') {
                 if ($precio_row && $precio_row['precio_venta']) {
                     $precio = $precio_row['precio_venta'];
                 }
-            }
-            if ($precio == 0) {
-                $stmt_insumo->execute([$item['insumo_id']]);
-                $insumo = $stmt_insumo->fetch();
-                $precio = $insumo['precio_venta'] ?? 0;
             }
             $stmt_ins->execute([$ticket_id, $item['insumo_id'], $item['cantidad'], $precio]);
         }
@@ -145,7 +157,7 @@ if ($action === 'detail') {
     
     $ticket_id = $_GET['id'] ?? 0;
     
-    $stmt = $pdo->prepare("SELECT t.*, s.nombre as sede_nombre, s.ciudad, s.direccion,
+    $stmt = $pdo->prepare("SELECT t.*, s.nombre as sede_nombre, s.ciudad as ciudad, s.direccion,
         u.nombre as comprador_nombre, u.apellido as comprador_apellido, u.celular,
         d.nombre as distribuidor_nombre, d.apellido as distribuidor_apellido
         FROM tickets t
@@ -171,7 +183,7 @@ if ($action === 'detail') {
         exit;
     }
     
-    $stmt = $pdo->prepare("SELECT ti.*, i.descripcion, i.grupo, i.unidad_medida, i.precio_venta
+    $stmt = $pdo->prepare("SELECT ti.*, i.descripcion, i.grupo, i.unidad_medida, ti.precio_unitario
         FROM ticket_items ti
         JOIN insumos i ON ti.insumo_id = i.id
         WHERE ti.ticket_id = ?");

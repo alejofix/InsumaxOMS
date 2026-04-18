@@ -380,7 +380,7 @@ $unidades = $stmt->fetchAll();
                 return n ? parseFloat(n).toLocaleString('es-CO') : '-';
             };
             var factor = parseFloat(i.factor_conversion) || 1;
-            var factorDisplay = factor > 1 ? '<strong>' + fmt(factor) + 'g</strong>' : '<span class="text-muted">-</span>';
+            var factorDisplay = factor > 1 ? fmt(factor) + 'g' : '<span class="text-muted">-</span>';
             var precioKg = i.precio_kg ? '<span class="badge bg-success">$' + fmt(i.precio_kg) + '</span>' : '<span class="text-muted">-</span>';
             var unidadDisplay = '<span class="badge bg-primary">' + (i.unidad_compra || i.unidad_medida || '-') + '</span>';
             var colorGrupo = coloresGrupo[i.grupo] || '#6c757d';
@@ -398,7 +398,7 @@ $unidades = $stmt->fetchAll();
                 '<td class="' + descClass + ' py-1 px-1">' + i.descripcion + '</td>' +
                 '<td class="text-muted small py-1 px-1">' + presentacion + '</td>' +
                 '<td class="py-1 px-1">' + unidadDisplay + '</td>' +
-                '<td class="text-nowrap py-1 px-1">' + factorDisplay + '</td>' +
+                '<td class="text-muted small py-1 px-1">' + factorDisplay + '</td>' +
                 '<td class="text-nowrap py-1 px-1">' + (i.precio_compra ? '$' + fmt(i.precio_compra) : '-') + '</td>' +
                 '<td class="text-nowrap py-1 px-1">' + (i.precio_venta ? '$' + fmt(i.precio_venta) : '-') + '</td>' +
                 '<td class="py-1 px-1">' + precioKg + '</td>' +
