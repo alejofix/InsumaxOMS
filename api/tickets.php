@@ -201,6 +201,29 @@ if ($action === 'assign') {
     $ticket_id = $_POST['ticket_id'] ?? 0;
     $distribuidor_id = $_POST['distribuidor_id'] ?? 0;
     
+    $stmt = $pdo->prepare("SELECT s.ciudad FROM tickets t JOIN sedes s ON t.sede_id = s.id WHERE t.id = ?");
+    $stmt->execute([$ticket_id]);
+    $ticket = $stmt->fetch();
+    
+    if (!$ticket) {
+        echo json_encode(['success' => false, 'error' => 'Ticket no encontrado']);
+        exit;
+    }
+    
+    $stmt = $pdo->prepare("SELECT ciudad FROM usuarios WHERE id = ? AND rol = 'dist' AND activo = 1");
+    $stmt->execute([$distribuidor_id]);
+    $dist = $stmt->fetch();
+    
+    if (!$dist) {
+        echo json_encode(['success' => false, 'error' => 'Distribuidor no válido']);
+        exit;
+    }
+    
+    if ($dist['ciudad'] !== $ticket['ciudad']) {
+        echo json_encode(['success' => false, 'error' => 'El distribuidor no pertenece a la ciudad de la sede']);
+        exit;
+    }
+    
     $stmt = $pdo->prepare("UPDATE tickets SET distribuidor_id = ?, estado = 'proceso' WHERE id = ?");
     $stmt->execute([$distribuidor_id, $ticket_id]);
     
@@ -220,8 +243,13 @@ if ($action === 'status') {
         exit;
     }
     
-    $stmt = $pdo->prepare("UPDATE tickets SET estado = ? WHERE id = ?");
-    $stmt->execute([$estado, $ticket_id]);
+    if ($estado === 'recibido') {
+        $stmt = $pdo->prepare("UPDATE tickets SET estado = 'recibido', distribuidor_id = NULL WHERE id = ?");
+        $stmt->execute([$ticket_id]);
+    } else {
+        $stmt = $pdo->prepare("UPDATE tickets SET estado = ? WHERE id = ?");
+        $stmt->execute([$estado, $ticket_id]);
+    }
     
     if ($estado === 'finalizado') {
         $stmt = $pdo->prepare("UPDATE tickets SET fecha_entrega = NOW() WHERE id = ?");
