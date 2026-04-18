@@ -105,7 +105,7 @@ $color_ciudad = $colors['ciudades'][$ciudad_nombre] ?? '#6c757d';
                         <th>Pres</th>
                         <th>UND</th>
                         <th>Fac</th>
-                        <th>$ Venta</th>
+                        <th>$ Precio</th>
                         <th>Cant</th>
                         <th>Total</th>
                     </tr>
@@ -193,7 +193,7 @@ $color_ciudad = $colors['ciudades'][$ciudad_nombre] ?? '#6c757d';
                 '<td class="fw-bold">' + (i.precio_venta ? '$' + fmt(i.precio_venta) : '-') + '</td>' +
                 '<td>' +
                 '<input type="number" class="form-control form-control-sm insumo-qty" ' +
-                'min="0" step="0.01" placeholder="0" ' +
+                'min="0" step="0.01" placeholder="0" style="border-color: #fd7e0; box-shadow: 0 0 0 2px rgba(253, 126, 0, 0.25);" ' +
                 'oninput="calcularItem(this)" ' +
                 'data-id="' + i.id + '">' +
                 '</td>' +
