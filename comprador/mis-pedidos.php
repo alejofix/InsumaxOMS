@@ -43,7 +43,7 @@ foreach ($colors['estados'] as $estado => $config) {
                     <tr>
                         <th>Código</th>
                         <th>Fecha</th>
-                        <th>Responsable</th>
+                        <th>Usuario</th>
                         <th>Estado</th>
                         <th>Acciones</th>
                     </tr>
