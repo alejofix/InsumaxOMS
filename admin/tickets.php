@@ -47,9 +47,9 @@ $todos_distribuidores = $pdo->query("SELECT id, nombre, apellido, ciudad FROM us
     <div class="container py-4">
         <h4><i class="bi bi-ticket-detailed"></i> Gestión de Tickets</h4>
         
-        <form method="GET" class="row mb-3">
+        <form method="GET" action="tickets.php" class="row mb-3">
             <div class="col-md-3">
-                <select name="estado" class="form-select">
+                <select name="estado" class="form-select" onchange="this.form.submit()">
                     <option value="">Todos los estados</option>
                     <option value="recibido" <?= $estado=='recibido'?'selected':''?>>Recibido</option>
                     <option value="proceso" <?= $estado=='proceso'?'selected':''?>>En Proceso</option>
@@ -58,7 +58,7 @@ $todos_distribuidores = $pdo->query("SELECT id, nombre, apellido, ciudad FROM us
                 </select>
             </div>
             <div class="col-md-3">
-                <select name="sede_id" class="form-select">
+                <select name="sede_id" class="form-select" onchange="this.form.submit()">
                     <option value="">Todas las sedes</option>
                     <?php foreach($sedes as $s): ?>
                     <option value="<?= $s['id'] ?>" <?= $sede_id==$s['id']?'selected':''?>><?= htmlspecialchars($s['nombre']) ?></option>
@@ -67,6 +67,9 @@ $todos_distribuidores = $pdo->query("SELECT id, nombre, apellido, ciudad FROM us
             </div>
             <div class="col-md-2">
                 <button type="submit" class="btn btn-primary">Filtrar</button>
+            </div>
+            <div class="col-md-2">
+                <a href="tickets.php" class="btn btn-outline-secondary">Limpiar</a>
             </div>
         </form>
 
@@ -136,7 +139,6 @@ $todos_distribuidores = $pdo->query("SELECT id, nombre, apellido, ciudad FROM us
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
     const distribuidores = <?= json_encode($todos_distribuidores) ?>;
 
