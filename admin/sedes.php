@@ -72,6 +72,48 @@ $sedes = $stmt->fetchAll();
         </div>
     </div>
 
+    <!-- Modal Nueva Sede -->
+    <div class="modal fade" id="newModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-plus-circle"></i> Nueva Sede</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="form-new">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Nombre</strong> <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="new-nombre" name="nombre" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Ciudad</strong> <span class="text-danger">*</span></label>
+                            <select class="form-select" id="new-ciudad" name="ciudad_id" required>
+                                <option value="">Seleccionar ciudad...</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><i class="bi bi-person"></i> Responsable</label>
+                            <input type="text" class="form-control" id="new-responsable" name="responsable">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><i class="bi bi-pin-map"></i> Dirección</label>
+                            <input type="text" class="form-control" id="new-direccion" name="direccion">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><i class="bi bi-telephone"></i> Teléfono</label>
+                            <input type="text" class="form-control" id="new-telefono" name="telefono">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-insumax"><i class="bi bi-check"></i> Crear Sede</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Editar -->
     <div class="modal fade" id="editModal" tabindex="-1">
         <div class="modal-dialog">
@@ -210,9 +252,51 @@ $sedes = $stmt->fetchAll();
             });
         };
         
+        var ciudadesCargadas = false;
+        
         window.mostrarForm = function() {
-            alert('Formulario de nueva sede por implementar');
+            if (!ciudadesCargadas) {
+                var url = basePath + '/api/sedes.php?action=ciudades';
+                fetch(url)
+                    .then(function(resp) { return resp.json(); })
+                    .then(function(result) {
+                        if (!result.success) return;
+                        var select = document.getElementById('new-ciudad');
+                        result.data.forEach(function(c) {
+                            var opt = document.createElement('option');
+                            opt.value = c.id;
+                            opt.textContent = c.nombre;
+                            select.appendChild(opt);
+                        });
+                        ciudadesCargadas = true;
+                    });
+            }
+            new bootstrap.Modal(document.getElementById('newModal')).show();
         };
+        
+        document.getElementById('form-new').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var formData = new FormData(e.target);
+            formData.append('csrf_token', csrfToken);
+            var url = basePath + '/api/sedes.php?action=save';
+            fetch(url, {
+                method: 'POST',
+                body: formData
+            })
+            .then(function(resp) { if (!resp.ok) throw new Error('HTTP ' + resp.status); return resp.json(); })
+            .then(function(result) {
+                if (result.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('newModal')).hide();
+                    e.target.reset();
+                    location.reload();
+                } else {
+                    alert('Error: ' + (result.error || 'desconocido'));
+                }
+            })
+            .catch(function(err) {
+                alert('Error al guardar: ' + err.message);
+            });
+        });
     });
     </script>
 </body>
