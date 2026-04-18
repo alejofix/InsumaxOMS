@@ -53,7 +53,7 @@ if ($action === 'create') {
     $dateStr = date('Ymd');
     $sedeIdStr = str_pad($sede_id, 3, '0', STR_PAD_LEFT);
     $likePattern = 'INS-' . $sedeIdStr . '-' . $dateStr . '-%';
-    $stmt = $pdo->prepare("SELECT codigo_ticket FROM tickets WHERE sede_id = ? AND fecha_pedido = CURDATE() AND codigo_ticket LIKE ?");
+    $stmt = $pdo->prepare("SELECT codigo_ticket FROM tickets WHERE sede_id = ? AND codigo_ticket LIKE ?");
     $stmt->execute([$sede_id, $likePattern]);
     $results = $stmt->fetchAll();
     $seq = 1;
