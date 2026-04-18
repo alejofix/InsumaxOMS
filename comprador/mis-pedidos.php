@@ -107,15 +107,16 @@ foreach ($colors['estados'] as $estado => $config) {
                     <h5>Ticket: ${ticket.codigo_ticket}</h5>
                     <p><strong>Sede:</strong> ${ticket.sede_nombre} - ${ticket.ciudad}</p>
                     <p><strong>Fecha:</strong> ${ticket.fecha_pedido}</p>
-                    <p><strong>Usuario:</strong> ${ticket.responsable}</p>
+                    <p><strong>Distribuidor:</strong> ${ticket.distribuidor_nombre ? ticket.distribuidor_nombre + ' ' + ticket.distribuidor_apellido : (ticket.estado === 'recibido' ? 'SIN ASIGNAR' : '-')}</p>
                     <p><strong>Estado:</strong> <span class="estado-badge estado-${ticket.estado}">${ticket.estado.toUpperCase()}</span></p>
                     ${ticket.observaciones ? `<p><strong>Observaciones:</strong> ${ticket.observaciones}</p>` : ''}
                     <h6 class="mt-3">Ítems:</h6>
                     <table class="table table-sm">
-                        <thead><tr><th>Producto</th><th>Cantidad</th><th>Estado</th></tr></thead>
+                        <thead><tr><th>Código</th><th>Producto</th><th>Cantidad</th><th>Estado</th></tr></thead>
                         <tbody>
                             ${items.map(item => `
                                 <tr>
+                                    <td>${item.codigo}</td>
                                     <td>${item.descripcion}</td>
                                     <td>${item.cantidad_pedida}</td>
                                     <td>${item.estado_item}</td>

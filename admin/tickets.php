@@ -68,9 +68,7 @@ $todos_distribuidores = $pdo->query("SELECT id, nombre, apellido, ciudad FROM us
             <div class="col-md-2">
                 <button type="submit" class="btn btn-primary">Filtrar</button>
             </div>
-            <div class="col-md-2">
-                <a href="tickets.php" class="btn btn-outline-secondary">Limpiar</a>
-            </div>
+            
         </form>
 
         <div class="table-responsive">

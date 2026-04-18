@@ -118,9 +118,11 @@ if ($action === 'list') {
     
     try {
         if ($rol === 'comprador') {
-            $stmt = $pdo->prepare("SELECT t.*, s.nombre as sede_nombre, s.ciudad 
+            $stmt = $pdo->prepare("SELECT t.*, s.nombre as sede_nombre, s.ciudad,
+                d.nombre as distribuidor_nombre, d.apellido as distribuidor_apellido
                 FROM tickets t 
                 JOIN sedes s ON t.sede_id = s.id 
+                LEFT JOIN usuarios d ON t.distribuidor_id = d.id
                 WHERE t.comprador_id = ? AND s.activa = 1
                 ORDER BY t.created_at DESC");
             $stmt->execute([$user_id]);
@@ -183,7 +185,7 @@ if ($action === 'detail') {
         exit;
     }
     
-    $stmt = $pdo->prepare("SELECT ti.*, i.descripcion, i.grupo, i.unidad_medida, ti.precio_unitario
+    $stmt = $pdo->prepare("SELECT ti.*, i.codigo, i.descripcion, i.grupo, i.unidad_medida, ti.precio_unitario
         FROM ticket_items ti
         JOIN insumos i ON ti.insumo_id = i.id
         WHERE ti.ticket_id = ?");

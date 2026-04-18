@@ -27,7 +27,7 @@ if (!$ticket) {
     die('Ticket no encontrado');
 }
 
-$stmt = $pdo->prepare("SELECT ti.*, i.descripcion, i.grupo, i.unidad_medida, ti.precio_unitario
+$stmt = $pdo->prepare("SELECT ti.*, i.codigo, i.descripcion, i.unidad_medida, ti.precio_unitario
     FROM ticket_items ti
     JOIN insumos i ON ti.insumo_id = i.id
     WHERE ti.ticket_id = ?");
@@ -82,8 +82,8 @@ $total = array_sum(array_column($items, 'precio_unitario'));
             <table class="table table-hover">
                 <thead class="table-light">
                     <tr>
+                        <th>Código</th>
                         <th>Insumo</th>
-                        <th>Grupo</th>
                         <th>Cantidad</th>
                         <th>Precio Unit.</th>
                         <th>Total</th>
@@ -93,8 +93,8 @@ $total = array_sum(array_column($items, 'precio_unitario'));
                 <tbody>
                     <?php foreach($items as $item): ?>
                     <tr>
+                        <td><?= htmlspecialchars($item['codigo']) ?></td>
                         <td><?= htmlspecialchars($item['descripcion']) ?></td>
-                        <td><?= htmlspecialchars($item['grupo']) ?></td>
                         <td><?= $item['cantidad_pedida'] ?> <?= htmlspecialchars($item['unidad_medida']) ?></td>
                         <td>$<?= number_format($item['precio_unitario'], 0, ',', '.') ?></td>
                         <td>$<?= number_format($item['cantidad_pedida'] * $item['precio_unitario'], 0, ',', '.') ?></td>
