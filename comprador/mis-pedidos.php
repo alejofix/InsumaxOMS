@@ -80,6 +80,10 @@ foreach ($colors['estados'] as $estado => $config) {
                         <button class="btn btn-sm btn-outline-primary" onclick="verDetalle(${ticket.id})">
                             <i class="bi bi-eye"></i> Ver
                         </button>
+                        ${ticket.estado === 'recibido' ? `
+                        <button class="btn btn-sm btn-outline-warning" onclick="editarPedido(${ticket.id})">
+                            <i class="bi bi-pencil"></i> Editar
+                        </button>` : ''}
                     </td>
                 </tr>
             `}).join('');
@@ -134,6 +138,86 @@ foreach ($colors['estados'] as $estado => $config) {
         }
     }
 
+    let editItems = [];
+    
+    async function editarPedido(ticketId) {
+        try {
+            const resp = await fetch('../api/tickets.php?action=detail&id=' + ticketId);
+            const result = await resp.json();
+            
+            if (!result.success) {
+                alert(result.error);
+                return;
+            }
+            
+            const ticket = result.ticket;
+            editItems = result.items;
+            
+            if (ticket.estado !== 'recibido') {
+                alert('Solo se pueden editar pedidos en estado recibido');
+                return;
+            }
+            
+            let html = `
+                <div class="text-start">
+                    <h5>Ticket: ${ticket.codigo_ticket}</h5>
+                    <p><strong>Sede:</strong> ${ticket.sede_nombre} - ${ticket.ciudad}</p>
+                    <p><strong>Fecha:</strong> ${ticket.fecha_pedido}</p>
+                    <p class="text-muted"><small>Ingrese 0 para eliminar un ítem</small></p>
+                    <table class="table table-sm">
+                        <thead><tr><th>Producto</th><th>Cantidad</th></tr></thead>
+                        <tbody>
+                            ${editItems.map(item => `
+                                <tr>
+                                    <td>${item.codigo} - ${item.descripcion}</td>
+                                    <td>
+                                        <input type="number" class="form-control form-control-sm" 
+                                            id="cant-${item.id}" value="${item.cantidad_pedida}" 
+                                            min="0" step="0.01" style="width: 100px;">
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            document.getElementById('edit-modal-body').innerHTML = html;
+            document.getElementById('edit-modal-title').textContent = 'Editar Pedido';
+            document.getElementById('edit-ticket-id').value = ticketId;
+            new bootstrap.Modal(document.getElementById('editModal')).show();
+        } catch (err) {
+            alert('Error al cargar detalle');
+        }
+    }
+
+    async function guardarEdicion() {
+        const ticketId = document.getElementById('edit-ticket-id').value;
+        
+        const items = editItems.map(item => ({
+            item_id: item.id,
+            cantidad: parseFloat(document.getElementById('cant-' + item.id).value) || 0
+        }));
+        
+        try {
+            const resp = await fetch('../api/tickets.php?action=update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ticket_id: parseInt(ticketId), items })
+            });
+            const result = await resp.json();
+            
+            if (result.success) {
+                bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+                cargarPedidos();
+            } else {
+                alert(result.error);
+            }
+        } catch (err) {
+            alert('Error al guardar');
+        }
+    }
+
     cargarPedidos();
     </script>
 
@@ -151,5 +235,23 @@ foreach ($colors['estados'] as $estado => $config) {
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="edit-modal-title">Editar</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="edit-modal-body"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="guardarEdicion()">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <input type="hidden" id="edit-ticket-id">
 </body>
 </html>

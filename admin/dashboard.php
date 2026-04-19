@@ -172,12 +172,19 @@ $ultimos_tickets = $pdo->query($sql)->fetchAll();
                         <h5 class="mb-0"><i class="bi bi-shop"></i> Tickets por Sede</h5>
                     </div>
                     <div class="card-body">
+                        <?php $total_sedes = 0; ?>
                         <?php foreach ($sedes_stats as $s): ?>
+                        <?php $total_sedes += $s['total']; ?>
                         <div class="d-flex justify-content-between mb-2">
                             <span><?= htmlspecialchars($s['sede']) ?></span>
                             <strong><?= $s['total'] ?></strong>
                         </div>
                         <?php endforeach; ?>
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <strong>Total</strong>
+                            <strong class="text-insumax"><?= $total_sedes ?></strong>
+                        </div>
                     </div>
                 </div>
             </div>

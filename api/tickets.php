@@ -262,4 +262,72 @@ if ($action === 'status') {
     exit;
 }
 
+if ($action === 'update') {
+    requireAuth();
+    
+    if ($_SESSION['rol'] !== 'comprador') {
+        echo json_encode(['success' => false, 'error' => 'Sin acceso']);
+        exit;
+    }
+    
+    $inputRaw = file_get_contents('php://input');
+    $input = json_decode($inputRaw, true);
+    
+    if (!$input) {
+        echo json_encode(['success' => false, 'error' => 'Datos inválidos']);
+        exit;
+    }
+    
+    $ticket_id = $input['ticket_id'] ?? 0;
+    $items = $input['items'] ?? [];
+    
+    if (!$ticket_id || empty($items)) {
+        echo json_encode(['success' => false, 'error' => 'Datos requeridos']);
+        exit;
+    }
+    
+    $stmt = $pdo->prepare("SELECT id, comprador_id, estado FROM tickets WHERE id = ?");
+    $stmt->execute([$ticket_id]);
+    $ticket = $stmt->fetch();
+    
+    if (!$ticket) {
+        echo json_encode(['success' => false, 'error' => 'Ticket no encontrado']);
+        exit;
+    }
+    
+    if ($ticket['comprador_id'] != $_SESSION['user_id']) {
+        echo json_encode(['success' => false, 'error' => 'Sin acceso']);
+        exit;
+    }
+    
+    if ($ticket['estado'] !== 'recibido') {
+        echo json_encode(['success' => false, 'error' => 'Solo se pueden editar pedidos en estado recibido']);
+        exit;
+    }
+    
+    try {
+        $pdo->beginTransaction();
+        
+        foreach ($items as $item) {
+            $item_id = $item['item_id'] ?? 0;
+            $cantidad = floatval($item['cantidad']);
+            
+            if ($cantidad <= 0) {
+                $stmt_del = $pdo->prepare("DELETE FROM ticket_items WHERE id = ? AND ticket_id = ?");
+                $stmt_del->execute([$item_id, $ticket_id]);
+            } else {
+                $stmt_upd = $pdo->prepare("UPDATE ticket_items SET cantidad_pedida = ? WHERE id = ? AND ticket_id = ?");
+                $stmt_upd->execute([$cantidad, $item_id, $ticket_id]);
+            }
+        }
+        
+        $pdo->commit();
+        echo json_encode(['success' => true]);
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        echo json_encode(['success' => false, 'error' => 'Error al actualizar: ' . $e->getMessage()]);
+    }
+    exit;
+}
+
 echo json_encode(['success' => false, 'error' => 'Acción no válida']);

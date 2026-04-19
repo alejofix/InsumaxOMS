@@ -10,6 +10,8 @@ El archivo principal de referencia para insumos es:
 /home/alejo_fix/Escritorio/borrar/insumax/INSUMOS.xlsx
 ```
 
+👉 Order Management System (Sistema de Gestión de Órdenes)
+
 Este archivo contiene el catálogo base de insumos organizados por grupos:
 - **CARNES**: Carne molida, desmechar, costilla cerdo, pollo filete, tocineta
 - **QUESOS**: Queso crema, philadelphia, mozzarella, cheddar
