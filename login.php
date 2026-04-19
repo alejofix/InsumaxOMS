@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($email) || empty($password)) {
         $error = 'Por favor ingrese email y contraseña';
     } else {
-        $stmt = $pdo->prepare("SELECT id, nombre, email, password_hash, rol, apellido, celular, activo, sede_id FROM usuarios WHERE email = ? AND activo = 1");
+        $stmt = $pdo->prepare("SELECT id, nombre, email, password_hash, rol, apellido, celular, activo, sede_id, ciudad FROM usuarios WHERE email = ? AND activo = 1");
         $stmt->execute([$email]);
         $user = $stmt->fetch();
         
@@ -24,6 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['rol'] = $user['rol'];
             $_SESSION['celular'] = $user['celular'] ?? '';
             $_SESSION['sede_id'] = $user['sede_id'] ?? null;
+            $_SESSION['ciudad'] = $user['ciudad'] ?? null;
             
             // Redirect based on role
             $role_redirects = [
