@@ -11,8 +11,9 @@ $home_link = match($_SESSION['rol'] ?? '') {
 ?>
 <nav class="navbar navbar-expand-lg navbar-dark" style="background: var(--insumax-dark, #1a1a1a);">
     <div class="container-fluid">
-        <a class="navbar-brand d-flex align-items-center" href="<?= $home_link ?>">
-            <img src="../assets/logo-navbar.svg" alt="INSUMAX OMS" height="36">
+        <a class="navbar-brand" style="display: flex; align-items: baseline; margin-right: 20px;" href="<?= $home_link ?>">
+            <span style="font-size: 24px; font-weight: bold; background: linear-gradient(90deg, #FF6B00, #FF8A00); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">INSUMAX</span>
+            <span style="font-size: 12px; font-weight: bold; color: white; margin-left: 4px;">OMS</span>
         </a>
         <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
