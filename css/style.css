@@ -87,6 +87,27 @@ body {
   padding: 40px 30px;
 }
 
+body { padding-bottom: 80px; }
+.insumo-row td { vertical-align: middle; }
+.insumo-qty { width: 80px; }
+.insumo-total { font-weight: 600; color: #28a745; }
+.badge-grupo { font-size: 10px; }
+.total-fijo {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  color: white;
+  padding: 12px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+  z-index: 1000;
+}
+.estado-badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+.ticket-card { border-left: 4px solid #1a5fb4; }
+
 .form-control:focus {
   border-color: var(--insumax-primary);
   box-shadow: 0 0 0 0.2rem rgba(232, 93, 36, 0.15);

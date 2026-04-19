@@ -27,7 +27,6 @@ foreach ($colors['estados'] as $estado => $config) {
     <link rel="stylesheet" href="../css/style.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
-        .estado-badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
         <?= $estadosStyle ?>
     </style>
 </head>

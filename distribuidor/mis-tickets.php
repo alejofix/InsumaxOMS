@@ -22,9 +22,7 @@ $user_id = $_SESSION['user_id'];
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="../css/style.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <style>
-        .ticket-card { border-left: 4px solid #1a5fb4; }
-    </style>
+    
 </head>
 <body>
     <?php include '../includes/header.php'; ?>

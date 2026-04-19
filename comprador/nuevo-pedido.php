@@ -36,27 +36,7 @@ $color_ciudad = $colors['ciudades'][$ciudad_nombre] ?? '#6c757d';
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="../css/style.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <style>
-        body { padding-bottom: 80px; }
-        .insumo-row td { vertical-align: middle; }
-        .insumo-qty { width: 80px; }
-        .insumo-total { font-weight: 600; color: #28a745; }
-        .badge-grupo { font-size: 10px; }
-        .total-fijo {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: <?= $color_ciudad ?>;
-            color: white;
-            padding: 12px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
-            z-index: 1000;
-        }
-    </style>
+    
 </head>
 <body>
     <?php include '../includes/header.php'; ?>
@@ -122,7 +102,7 @@ $color_ciudad = $colors['ciudades'][$ciudad_nombre] ?? '#6c757d';
         </div>
     </div>
 
-    <div class="total-fijo" id="total-fijo">
+    <div class="total-fijo" id="total-fijo" style="background: <?= $color_ciudad ?>;">
         <div>
             <span class="opacity-75">Total:</span>
             <span id="total-pedido" style="font-size: 20px; font-weight: 700;">$0</span>
