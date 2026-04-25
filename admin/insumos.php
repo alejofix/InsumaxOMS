@@ -382,7 +382,7 @@ $unidades = $stmt->fetchAll();
             var factor = parseFloat(i.factor_conversion) || 1;
             var factorDisplay = factor > 1 ? fmt(factor) + 'g' : '<span class="text-muted">-</span>';
             var precioKg = i.precio_kg ? '<span class="badge bg-success">$' + fmt(i.precio_kg) + '</span>' : '<span class="text-muted">-</span>';
-            var unidadDisplay = '<span class="badge bg-primary">' + (i.unidad_compra || i.unidad_medida || '-') + '</span>';
+            var unidadDisplay = '<span class="badge bg-secondary">' + (i.unidad_compra || i.unidad_medida || '-') + '</span>';
             var colorGrupo = coloresGrupo[i.grupo] || '#6c757d';
             var presentacion = i.presentacion || '-';
             var activo = i.activo !== 0 ? 1 : 0;

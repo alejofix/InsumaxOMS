@@ -34,7 +34,7 @@ $user_id = $_SESSION['user_id'];
     const coloresCiudades = <?= json_encode($colors['ciudades']) ?>;
     const coloresEstados = <?= json_encode($colors['estados']) ?>;
     
-    fetch('test-api.php')
+    fetch('../api/tickets.php?action=list')
     .then(r => r.json())
     .then(data => {
         console.log(data);
@@ -70,7 +70,7 @@ $user_id = $_SESSION['user_id'];
                         </div>
                     </div>
                     <button class="btn btn-primary btn-sm mt-3" onclick="verDetalle(${t.id})">
-                        <i class="bi bi-check2-square"></i> Ver Checklist
+                        <i class="bi bi-check2-square"></i> Checklist
                     </button>
                 </div>
             </div>
@@ -83,6 +83,7 @@ $user_id = $_SESSION['user_id'];
 
     let currentTicket = null;
     let currentItems = [];
+    let currentCiudadId = null;
 
     function verDetalle(ticketId) {
         fetch('../api/tickets.php?action=detail&id=' + ticketId)
@@ -91,13 +92,38 @@ $user_id = $_SESSION['user_id'];
             if (!data.success) { alert(data.error); return; }
             currentTicket = data.ticket;
             currentItems = data.items;
-            
-            let html = `
-                <div class="text-start">
+            currentCiudadId = data.ciudad_id;
+
+            buildChecklistTab();
+            new bootstrap.Modal(document.getElementById('detailModal')).show();
+        });
+    }
+
+    function buildChecklistTab() {
+        const esProceso = currentTicket.estado === 'proceso';
+        
+        let html = `
+            <ul class="nav nav-tabs mb-3" id="detailTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="checklist-tab" data-bs-toggle="tab" data-bs-target="#checklist-panel" type="button" role="tab">
+                        <i class="bi bi-check2-square"></i> Checklist
+                    </button>
+                </li>
+                ${esProceso ? `
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="precios-tab" data-bs-toggle="tab" data-bs-target="#precios-panel" type="button" role="tab">
+                        <i class="bi bi-currency-dollar"></i> Precios
+                    </button>
+                </li>
+                ` : ''}
+            </ul>
+            <div class="tab-content" id="detailTabContent">
+                <div class="tab-pane fade show active" id="checklist-panel" role="tabpanel">
                     <h5>${currentTicket.codigo_ticket}</h5>
                     <p><strong>Sede:</strong> ${currentTicket.sede_nombre}</p>
                     <p><strong>Fecha:</strong> ${currentTicket.fecha_pedido}</p>
                     <p><strong>Responsable:</strong> ${currentTicket.responsable}</p>
+                    <p><strong>Estado:</strong> <span class="badge bg-${currentTicket.estado === 'proceso' ? 'warning' : 'success'}">${currentTicket.estado.toUpperCase()}</span></p>
                     
                     <h6 class="mt-3">Items del Pedido</h6>
                     <table class="table table-sm" id="checklist-items">
@@ -132,10 +158,82 @@ $user_id = $_SESSION['user_id'];
                         </button>
                     </div>
                 </div>
-            `;
-            
-            document.getElementById('modal-body').innerHTML = html;
-            new bootstrap.Modal(document.getElementById('detailModal')).show();
+                ${esProceso ? `
+                <div class="tab-pane fade" id="precios-panel" role="tabpanel">
+                    <h5>Precios de Compra</h5>
+                    <p class="text-muted">Modifica el precio de compra solo para los items de este ticket</p>
+                    
+                    <table class="table table-sm" id="precios-items">
+                        <thead><tr><th>Producto</th><th>Unidad</th><th>Precio Compra</th></tr></thead>
+                        <tbody>
+                            ${currentItems.map(item => `
+                            <tr>
+                                <td>${item.descripcion}</td>
+                                <td>${item.unidad_medida}</td>
+                                <td>
+                                    <div class="input-group input-group-sm" style="width:150px;">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control" 
+                                            value="${item.precio_compra || 0}" min="0" step="0.01"
+                                            id="precio-${item.insumo_id}">
+                                    </div>
+                                </td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>
+                    
+                    <div class="mt-3">
+                        <button class="btn btn-warning" onclick="guardarPrecios()">
+                            <i class="bi bi-save"></i> Guardar Precios
+                        </button>
+                    </div>
+                </div>
+                ` : ''}
+            </div>
+        `;
+        
+        document.getElementById('modal-body').innerHTML = html;
+    }
+
+    function guardarPrecios() {
+        const ciudadId = currentCiudadId;
+        if (!ciudadId) {
+            alert('No se pudo obtener la ciudad');
+            return;
+        }
+        
+        const updates = currentItems
+            .filter(item => item.insumo_id)
+            .map(item => ({
+                insumo_id: item.insumo_id,
+                precio_compra: parseFloat(document.getElementById('precio-' + item.insumo_id).value) || 0
+            }));
+        
+        if (updates.length === 0) {
+            alert('No hay items para guardar');
+            return;
+        }
+        
+        Promise.all(updates.map(item => {
+            return fetch('../api/insumos.php?action=guardar_precio_compra', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: 'insumo_id=' + item.insumo_id + '&ciudad_id=' + ciudadId + '&precio_compra=' + item.precio_compra
+            });
+        }))
+        .then(results => Promise.all(results.map(r => r.json())))
+        .then(dataArray => {
+            const errors = dataArray.filter(d => !d.success);
+            if (errors.length > 0) {
+                alert('Error: ' + errors.map(e => e.error).join(', '));
+            } else {
+                alert('Precios guardados');
+                bootstrap.Modal.getInstance(document.getElementById('detailModal')).hide();
+                location.reload();
+            }
+        })
+        .catch(err => {
+            alert('Error al guardar precios');
         });
     }
 

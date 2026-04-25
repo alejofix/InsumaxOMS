@@ -209,6 +209,45 @@ if ($action === 'toggle') {
     exit;
 }
 
+if ($action === 'guardar_precio_compra') {
+    if ($_SESSION['rol'] !== 'dist') {
+        echo json_encode(['success' => false, 'error' => 'Acceso prohibido']);
+        exit;
+    }
+    
+    $insumo_id = intval($_POST['insumo_id'] ?? 0);
+    $ciudad_id = intval($_POST['ciudad_id'] ?? 0);
+    $precio_compra = floatval($_POST['precio_compra'] ?? 0);
+    $ciudad_dist = $_SESSION['ciudad'] ?? '';
+    
+    if (!$insumo_id || !$ciudad_id) {
+        echo json_encode(['success' => false, 'error' => 'Insumo y ciudad requeridos']);
+        exit;
+    }
+    
+    $stmt = $pdo->prepare("SELECT nombre FROM ciudades WHERE id = ?");
+    $stmt->execute([$ciudad_id]);
+    $ciudad = $stmt->fetch();
+    
+    if ($ciudad['nombre'] !== $ciudad_dist) {
+        echo json_encode(['success' => false, 'error' => 'Solo puedes modificar precios de tu ciudad']);
+        exit;
+    }
+    
+    try {
+        $stmt = $pdo->prepare("
+            INSERT INTO insumos_precios (insumo_id, ciudad_id, precio_compra)
+            VALUES (?, ?, ?)
+            ON DUPLICATE KEY UPDATE precio_compra = VALUES(precio_compra)
+        ");
+        $stmt->execute([$insumo_id, $ciudad_id, $precio_compra]);
+        echo json_encode(['success' => true]);
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+    exit;
+}
+
 if ($action === 'ciudades') {
     if ($_SESSION['rol'] !== 'admon') {
         echo json_encode(['success' => false, 'error' => 'Acceso prohibido']);

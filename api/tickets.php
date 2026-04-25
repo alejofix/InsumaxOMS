@@ -159,7 +159,7 @@ if ($action === 'detail') {
     
     $ticket_id = $_GET['id'] ?? 0;
     
-    $stmt = $pdo->prepare("SELECT t.*, s.nombre as sede_nombre, s.ciudad as ciudad, s.direccion,
+    $stmt = $pdo->prepare("SELECT t.*, s.nombre as sede_nombre, s.ciudad as ciudad, s.ciudad_id, s.direccion,
         u.nombre as comprador_nombre, u.apellido as comprador_apellido, u.celular,
         d.nombre as distribuidor_nombre, d.apellido as distribuidor_apellido
         FROM tickets t
@@ -185,14 +185,18 @@ if ($action === 'detail') {
         exit;
     }
     
-    $stmt = $pdo->prepare("SELECT ti.*, i.codigo, i.descripcion, i.grupo, i.unidad_medida, ti.precio_unitario
+    $ciudad_id = $ticket['ciudad_id'];
+    
+    $stmt = $pdo->prepare("SELECT ti.*, i.codigo, i.descripcion, i.grupo, i.unidad_medida, ti.precio_unitario,
+        ip.precio_compra
         FROM ticket_items ti
         JOIN insumos i ON ti.insumo_id = i.id
+        LEFT JOIN insumos_precios ip ON i.id = ip.insumo_id AND ip.ciudad_id = ?
         WHERE ti.ticket_id = ?");
-    $stmt->execute([$ticket_id]);
+    $stmt->execute([$ciudad_id, $ticket_id]);
     $items = $stmt->fetchAll();
     
-    echo json_encode(['success' => true, 'ticket' => $ticket, 'items' => $items]);
+    echo json_encode(['success' => true, 'ticket' => $ticket, 'items' => $items, 'ciudad_id' => $ciudad_id]);
     exit;
 }
 
